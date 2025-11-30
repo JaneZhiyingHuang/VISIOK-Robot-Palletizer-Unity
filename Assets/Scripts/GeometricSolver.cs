@@ -38,8 +38,8 @@ public class GeometricSolver : MonoBehaviour
         float angleToTarget = Mathf.Atan2(yDist, xDist) * Mathf.Rad2Deg;
         float cosTriangle = (arm1Length * arm1Length + c * c - arm2Length * arm2Length) / (2 * arm1Length * c);
         float angleTriangle = Mathf.Acos(Mathf.Clamp(cosTriangle, -1f, 1f)) * Mathf.Rad2Deg;
-        outAngles[1] = -(angleToTarget + angleTriangle) + j2Offset;
-
+        // 【修改测试】去掉前面的负号
+        outAngles[1] = (angleToTarget + angleTriangle) + j2Offset;
         // 5. J5 自动水平
         outAngles[4] = -(outAngles[1] + outAngles[2]);
 
