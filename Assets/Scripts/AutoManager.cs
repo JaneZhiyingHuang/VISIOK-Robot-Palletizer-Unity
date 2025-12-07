@@ -80,7 +80,7 @@ public class AutoManager : MonoBehaviour
 
         // 抬起时，J6 保持 0 度 (初始角度)
         MoveRobotTo(pickHover, 0f, "Step 2: Lift");
-        yield return new WaitForSeconds(8.0f);
+        yield return new WaitForSeconds(2.0f);
         LogCurrentJointAngles("抬起后状态");
 
         // =====================================================

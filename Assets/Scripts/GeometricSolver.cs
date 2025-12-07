@@ -1,6 +1,6 @@
 using UnityEngine;
 #if UNITY_EDITOR
-using UnityEditor;
+using UnityEditor; // 必须引入，用于画蓝色扇形
 #endif
 
 [ExecuteInEditMode]
@@ -26,197 +26,189 @@ public class GeometricSolver : MonoBehaviour
     [Header("计算结果 (相对于初始姿态的增量)")]
     public float[] outAngles = new float[6];
 
-    // --- 内部变量：记录初始状态 ---
+    // --- 内部变量 ---
     private float L1, L2, L_Hand;
 
-    // 初始的几何参数 (作为 0 度基准)
-    [SerializeField, HideInInspector] private float initJ1Angle;    // J1 初始水平角
-    [SerializeField, HideInInspector] private float initJ2Elevation; // J2 初始仰角
-    [SerializeField, HideInInspector] private float initJ3Inner;     // J3 初始内角
+    // 记录“初始状态”下的数学理论角度
+    // 我们不存物理角度，只存数学算出来的初始值，这样偏差会互相抵消
+    [SerializeField, HideInInspector] private float mathJ1_Init;
+    [SerializeField, HideInInspector] private float mathJ2_Init;
+    [SerializeField, HideInInspector] private float mathJ3_Init;
 
-    // 记录初始向量，用于画图 (扇形的起始边)
+    // 用于画图的“起始边”方向
     private Vector3 visInitJ1Dir;
     private Vector3 visInitJ2Dir;
     private Vector3 visInitJ3Dir;
 
     private bool isInitialized = false;
 
-    void OnEnable()
-    {
-        // 脚本激活时，记录当前姿态为 0 度
-        RecordZeroPose();
-    }
+    void OnEnable() { if (!Application.isPlaying) RecordZeroPose(); }
+    void Start() { InitializeLengths(); if (Application.isPlaying) RecordZeroPose(); }
 
-    // 每一帧计算
     void Update()
     {
+        // 确保随时都有初始值
         if (!isInitialized) RecordZeroPose();
 
+        // 编辑模式下实时解算
         if (previewTarget != null)
         {
             Solve(previewTarget.position, 0f);
         }
     }
 
-    [ContextMenu("1. 将当前姿态设为 0 度 (重置)")]
-    public void RecordZeroPose()
+    [ContextMenu("初始化臂长")]
+    public void InitializeLengths()
     {
-        if (!j2Shoulder || !j3Elbow || !j5Wrist || !gripperTip) return;
-
-        // 1. 初始化臂长
-        L1 = Vector3.Distance(j2Shoulder.position, j3Elbow.position);
-        L2 = Vector3.Distance(j3Elbow.position, j5Wrist.position);
-        L_Hand = Vector3.Distance(j5Wrist.position, gripperTip.position);
-
-        // 2. 记录初始 J1 (底座) 角度 [平面投影]
-        Vector3 dirToTip = gripperTip.position - j1Base.position;
-        Vector3 flatDir = Vector3.ProjectOnPlane(dirToTip, Vector3.up); // 投影到水平面 (World Y)
-        // 记录相对于世界X轴的角度作为基准
-        initJ1Angle = Vector3.SignedAngle(Vector3.right, flatDir, Vector3.up);
-        visInitJ1Dir = flatDir.normalized;
-
-        // 3. 记录初始 J2 (大臂) 仰角 [几何仰角]
-        // 计算初始的水平距离(r)和垂直高度(h)
-        float y_diff = gripperTip.position.y - j2Shoulder.position.y;
-        float r_dist = flatDir.magnitude; // 近似取末端的水平距离
-        // 记录此时的物理仰角
-        // 注意：这里我们反向推导初始的几何状态，简化为记录 Wrist 相对于 Shoulder 的仰角
-        // 更精确的做法是记录 L1 向量的仰角
-        Vector3 j2Dir = j3Elbow.position - j2Shoulder.position;
-        float j2FlatLen = new Vector2(j2Dir.x, j2Dir.z).magnitude;
-        initJ2Elevation = Mathf.Atan2(j2Dir.y, j2FlatLen) * Mathf.Rad2Deg;
-        visInitJ2Dir = j2Dir.normalized;
-
-        // 4. 记录初始 J3 (小臂) 内角
-        // 也就是 J2->J3 和 J3->J5 的夹角
-        Vector3 v1 = (j2Shoulder.position - j3Elbow.position).normalized;
-        Vector3 v2 = (j5Wrist.position - j3Elbow.position).normalized;
-        initJ3Inner = Vector3.Angle(v1, v2);
-        visInitJ3Dir = (j5Wrist.position - j3Elbow.position).normalized;
-
-        isInitialized = true;
-        // Debug.Log("已记录当前姿态为 0 度基准。");
+        if (j2Shoulder && j3Elbow && j5Wrist && gripperTip)
+        {
+            L1 = Vector3.Distance(j2Shoulder.position, j3Elbow.position);
+            L2 = Vector3.Distance(j3Elbow.position, j5Wrist.position);
+            L_Hand = Vector3.Distance(j5Wrist.position, gripperTip.position);
+        }
     }
 
+    // ==============================================================================
+    // 1. 记录零位 (逻辑升级：记录数学理论初值)
+    // ==============================================================================
+    [ContextMenu("重置零位 (Record Zero)")]
+    public void RecordZeroPose()
+    {
+        if (!j2Shoulder || !gripperTip) return;
+        InitializeLengths();
+
+        // --- A. 记录用于画图的向量 (物理现状) ---
+        // J1 起始线: 底座到末端的水平投影
+        Vector3 dirToTip = gripperTip.position - j1Base.position;
+        visInitJ1Dir = Vector3.ProjectOnPlane(dirToTip, Vector3.up).normalized;
+
+        // J2 起始线: 大臂向量
+        visInitJ2Dir = (j3Elbow.position - j2Shoulder.position).normalized;
+
+        // J3 起始线: 小臂向量
+        visInitJ3Dir = (j5Wrist.position - j3Elbow.position).normalized;
+
+        // --- B. 记录用于计算的数学角度 (理论现状) ---
+        // 把“当前吸盘的位置”当作目标，反算一套数学角度出来作为基准
+        float[] initAngles = CalculateMathAngles(gripperTip.position);
+
+        if (initAngles != null)
+        {
+            mathJ1_Init = initAngles[0];
+            mathJ2_Init = initAngles[1];
+            mathJ3_Init = initAngles[2];
+            isInitialized = true;
+        }
+    }
+
+    // ==============================================================================
+    // 2. 主计算入口 (计算差值)
+    // ==============================================================================
     public bool Solve(Vector3 targetPos, float placeRotationY = 0f)
     {
         if (!isInitialized) return false;
 
-        // =================================================
-        // J1: 绕 World Y (水平旋转)
-        // =================================================
-        Vector3 dirToTarget = targetPos - j1Base.position;
-        Vector3 flatDir = Vector3.ProjectOnPlane(dirToTarget, Vector3.up);
+        // 计算目标位置的数学解
+        float[] targetAngles = CalculateMathAngles(targetPos);
 
-        // 计算现在的绝对角度
-        float currJ1Angle = Vector3.SignedAngle(Vector3.right, flatDir, Vector3.up);
+        if (targetAngles == null) return false; // 无解 (够不着)
 
-        // 输出 = 现在 - 初始 (Delta)
-        outAngles[0] = (currJ1Angle - initJ1Angle);
+        // -----------------------------------------------------
+        // 核心逻辑：输出 = 目标数学角 - 初始数学角
+        // 这样可以消除所有物理安装误差
+        // -----------------------------------------------------
 
+        // J1: 
+        outAngles[0] = (targetAngles[0] - mathJ1_Init);
 
-        // =================================================
-        // J2, J3: 绕 World Z (垂直平面解算)
-        // =================================================
-        // 1. 几何解算 (Law of Cosines)
-        float y_diff = targetPos.y - j2Shoulder.position.y;
-        float r_dist = flatDir.magnitude; // 水平距离
+        // J2:
+        outAngles[1] = (targetAngles[1] - mathJ2_Init);
 
-        // 目标 Wrist 位置 (吸盘垂直向下逻辑)
-        float r_wrist = r_dist;
-        float h_wrist = y_diff + L_Hand;
+        // J3:
+        outAngles[2] = (targetAngles[2] - mathJ3_Init);
 
-        float c = Mathf.Sqrt(r_wrist * r_wrist + h_wrist * h_wrist);
-        if (c > L1 + L2) return false;
-
-        // 2. 计算当前的几何仰角
-        float alpha = Mathf.Atan2(h_wrist, r_wrist) * Mathf.Rad2Deg; // 整体仰角
-        float cosA = Mathf.Clamp((L1 * L1 + c * c - L2 * L2) / (2 * L1 * c), -1, 1);
-        float angleA = Mathf.Acos(cosA) * Mathf.Rad2Deg; // J2 内角
-        float cosB = Mathf.Clamp((L1 * L1 + L2 * L2 - c * c) / (2 * L1 * L2), -1, 1);
-        float angleB = Mathf.Acos(cosB) * Mathf.Rad2Deg; // J3 内角
-
-        // 3. 计算 Delta (增量)
-
-        // J2: 当前需要的仰角 = alpha + angleA
-        // 输出 = 当前仰角 - 初始仰角
-        float currentElevation = alpha + angleA;
-        outAngles[1] = currentElevation - initJ2Elevation;
-
-        // J3: 当前需要的内角 = angleB
-        // 输出 = 当前内角 - 初始内角
-        // 弯曲方向处理
-        float targetInner = angleB;
-        if (invertElbow) targetInner = -angleB; // 简单的反转逻辑
-
-        // 注意：J3 通常定义伸直为180或0，这里直接比较“变化量”
-        // 初始是 90度，现在算出来需要 90度，那 Delta 就是 0
-        // 但要注意方向，内角变小通常意味着弯曲
-        outAngles[2] = (targetInner - initJ3Inner);
-        // 修正：如果反向折叠，逻辑可能需要反过来，这里先按标准增量走
-
-        // =================================================
-        // J5, J6: 跟随逻辑
-        // =================================================
         // J4 固定
         outAngles[3] = 0f;
 
-        // J5: 绕 World Z
-        // 目标：抵消 J2 和 J3 的增量，保持和初始一样的姿态 (通常是垂直)
+        // J5 (跟随): 抵消 J2+J3 的增量，保持吸盘姿态不变
         outAngles[4] = -(outAngles[1] + outAngles[2]);
 
-        // J6: 绕 World Y
-        // 目标：抵消 J1 的增量
+        // J6 (跟随): 抵消 J1 的增量
         outAngles[5] = -outAngles[0] + placeRotationY;
 
         return true;
     }
 
+    // ==============================================================================
+    // 3. 纯数学解算核心 (输入坐标 -> 输出绝对数学角度)
+    // ==============================================================================
+    private float[] CalculateMathAngles(Vector3 targetPos)
+    {
+        // --- J1 解算 (水平面) ---
+        Vector3 dirToTarget = targetPos - j1Base.position;
+        Vector3 flatDir = Vector3.ProjectOnPlane(dirToTarget, Vector3.up);
+        // 计算相对于世界X轴的绝对角度
+        float j1Angle = Vector3.SignedAngle(Vector3.right, flatDir, Vector3.up);
+
+        // --- J2/J3 三角形解算 (垂直面) ---
+
+        // 水平距离r (相对于肩膀的垂直线)
+        Vector3 shoulderFlat = new Vector3(j2Shoulder.position.x, 0, j2Shoulder.position.z);
+        Vector3 targetFlat = new Vector3(targetPos.x, 0, targetPos.z);
+        float r_dist = Vector3.Distance(shoulderFlat, targetFlat);
+
+        // 垂直高度h
+        float y_diff = targetPos.y - j2Shoulder.position.y;
+
+        // 目标 Wrist 位置 (吸盘垂直向下逻辑)
+        float h_wrist = y_diff + L_Hand;
+        float c = Mathf.Sqrt(r_dist * r_dist + h_wrist * h_wrist);
+
+        if (c > L1 + L2) return null; // 够不着
+
+        // 余弦定理
+        float alpha = Mathf.Atan2(h_wrist, r_dist) * Mathf.Rad2Deg; // 仰角
+
+        float cosA = Mathf.Clamp((L1 * L1 + c * c - L2 * L2) / (2 * L1 * c), -1, 1);
+        float angleA = Mathf.Acos(cosA) * Mathf.Rad2Deg; // J2 内角
+
+        float cosB = Mathf.Clamp((L1 * L1 + L2 * L2 - c * c) / (2 * L1 * L2), -1, 1);
+        float angleB = Mathf.Acos(cosB) * Mathf.Rad2Deg; // J3 内角
+
+        // 组装结果
+        float j2Angle = alpha + angleA; // 绝对仰角
+
+        // 处理肘部反转 (解决折叠问题)
+        float j3Angle = angleB;
+        if (invertElbow) j3Angle = -angleB;
+
+        return new float[] { j1Angle, j2Angle, j3Angle };
+    }
+
 #if UNITY_EDITOR
+    // ==============================================================================
+    // 4. 可视化 (蓝色扇形回归!)
+    // ==============================================================================
     void OnDrawGizmos()
     {
-        if (!showGizmos || j1Base == null || !isInitialized) return;
+        if (!showGizmos || !isInitialized || j1Base == null) return;
 
-        // ----------------------------------------------------
-        // 1. J1 可视化 (绕 World Y, 蓝色扇形)
-        // ----------------------------------------------------
-        // 扇形起点：visInitJ1Dir (初始方向)
-        // 旋转轴：Vector3.up (World Y)
-        // 角度：outAngles[0]
-        DrawSector(j1Base.position, Vector3.up, visInitJ1Dir, -outAngles[0], "J1 (World Y)");
+        // J1: 绕 World Y (Vector3.up)
+        // 注意：因为 J1 算出来是正数代表逆时针，画图时可能需要取反，视视觉效果而定
+        // 这里为了对应数学逻辑，直接画 Delta
+        DrawJointSector(j1Base, Vector3.up, visInitJ1Dir, -outAngles[0], "J1");
 
+        // J2: 绕 World Z (Vector3.forward)
+        DrawJointSector(j2Shoulder, Vector3.forward, visInitJ2Dir, outAngles[1], "J2");
 
-        // ----------------------------------------------------
-        // 2. J2 可视化 (绕 World Z, 蓝色扇形)
-        // ----------------------------------------------------
-        // 这里有个技巧：如果 J1 转了，J2 的平面也转了。
-        // 为了画出正确的视觉效果，我们需要把初始向量也旋转一下，或者只在平面内画
-        // 但既然你说绕 World Z，那我们就画在 Z 平面上
+        // J3: 绕 World Z (Vector3.forward)
+        DrawJointSector(j3Elbow, Vector3.forward, visInitJ3Dir, outAngles[2], "J3");
 
-        // 为了视觉清晰，我们画出 "大臂当前方向" vs "大臂初始方向"
-        // 初始方向: visInitJ2Dir
-        // 旋转轴: J1转动后的 Right 轴 (或者是 World Z，取决于你的定义)
-        // 你的需求：绕世界 Z。那我们就用 Vector3.forward
-        // 扇形起点：需要投影到屏幕上或者局部空间
-        // 简单画法：以初始大臂向量为起点，画出 J2 的 Delta
+        // J5: 绕 World Z
+        DrawJointSector(j5Wrist, Vector3.forward, Vector3.right, outAngles[4], "J5");
 
-        // 修正：为了配合 J1 的旋转，J2 的视觉轴应该是 J1.right (局部 Z)
-        // 但严格遵守你的 "World Z"，我们用 Vector3.forward
-        DrawSector(j2Shoulder.position, Vector3.forward, visInitJ2Dir, outAngles[1], "J2 (World Z)");
-
-
-        // ----------------------------------------------------
-        // 3. J3 可视化 (绕 World Z)
-        // ----------------------------------------------------
-        // 视觉起点：小臂的初始朝向
-        DrawSector(j3Elbow.position, Vector3.forward, visInitJ3Dir, outAngles[2], "J3 (World Z)");
-
-
-        // ----------------------------------------------------
-        // 4. J5, J6
-        // ----------------------------------------------------
-        DrawSector(j5Wrist.position, Vector3.forward, Vector3.right, outAngles[4], "J5 (World Z)");
-        DrawSector(gripperTip.position, Vector3.up, Vector3.forward, outAngles[5], "J6 (World Y)");
+        // J6: 绕 World Y
+        DrawJointSector(gripperTip, Vector3.up, Vector3.forward, outAngles[5], "J6");
 
         // 画目标连线
         if (previewTarget)
@@ -226,27 +218,35 @@ public class GeometricSolver : MonoBehaviour
         }
     }
 
-    void DrawSector(Vector3 center, Vector3 axis, Vector3 from, float angle, string label)
+    // 辅助函数：画你喜欢的蓝色扇形
+    void DrawJointSector(Transform t, Vector3 worldAxis, Vector3 fromDir, float angle, string label)
     {
+        if (t == null) return;
+        Vector3 pos = t.position;
         float radius = 0.5f;
 
-        // 1. 扇形填充 (你要求的蓝色)
-        Handles.color = new Color(0, 0.5f, 1f, 0.2f); // 浅蓝半透明
-        Handles.DrawSolidArc(center, axis, from, angle, radius);
+        // 1. 画旋转轴 (黄色刺)
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawRay(pos, worldAxis * 0.6f);
 
-        // 2. 边框
+        // 2. 画半透明蓝色扇形 
+        Handles.color = new Color(0, 0.5f, 1f, 0.2f); // 浅蓝填充
+        Handles.DrawSolidArc(pos, worldAxis, fromDir, angle, radius);
+
+        // 3. 画实线边框
         Handles.color = Color.blue;
-        Handles.DrawWireArc(center, axis, from, angle, radius);
+        Handles.DrawWireArc(pos, worldAxis, fromDir, angle, radius);
 
-        // 3. 起始线 (虚线表示初始位置)
+        // 4. 画初始位置虚线
         Handles.color = Color.yellow;
-        Handles.DrawDottedLine(center, center + from * radius, 2f);
+        Handles.DrawDottedLine(pos, pos + fromDir * radius, 2f);
 
-        // 4. 文字
+        // 5. 文字标签
         GUIStyle style = new GUIStyle();
-        style.normal.textColor = Color.cyan;
+        style.normal.textColor = new Color(0.5f, 0.8f, 1f);
         style.fontSize = 14;
-        Handles.Label(center + axis * 0.2f, $"{label}: {angle:F1}°", style);
+        style.fontStyle = FontStyle.Bold;
+        Handles.Label(pos + worldAxis * 0.3f, $"{label}: {angle:F1}°", style);
     }
 #endif
 }
