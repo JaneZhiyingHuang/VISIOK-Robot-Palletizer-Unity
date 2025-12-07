@@ -2,31 +2,91 @@ using UnityEngine;
 
 public class PalletCalculator : MonoBehaviour
 {
-    public Transform palletStartCorner; // 托盘角落 (空物体)
+    // ==========================================
+    // 定义朝向枚举
+    // ==========================================
+    public enum BoxOrientation
+    {
+        [InspectorName("默认方向 (保持读取的长宽)")] Align_X,
+        [InspectorName("旋转90度 (交换长宽)")] Align_Z_Rotated
+    }
 
-    // 【新增】把箱子尺寸提出来做成变量，方便修改和画图
-    public float boxSize = 0.5f;
+    [Header("核心引用")]
+    public Transform palletStartCorner; // 托盘角落 (参考点)
 
-    // 我们只需要这一个函数，输入 0 就会得到第一个点
+    [Header("箱子设置")]
+    [Tooltip("请拖入场景里的一个箱子")]
+    public Transform boxReference;
+
+    [Header("尺寸与朝向")]
+    [Tooltip("读取到的原始尺寸")]
+    public Vector3 rawDimensions = new Vector3(0.5f, 0.5f, 0.5f);
+
+    [Tooltip("选择箱子在托盘上的放置朝向")]
+    public BoxOrientation placementOrientation = BoxOrientation.Align_X;
+
+    // ========================================================
+    // 辅助函数：获取最终计算用的尺寸 (根据朝向处理)
+    // ========================================================
+    private Vector3 GetFinalSize()
+    {
+        // 如果选了“旋转90度”，就交换 X 和 Z
+        if (placementOrientation == BoxOrientation.Align_Z_Rotated)
+        {
+            return new Vector3(rawDimensions.z, rawDimensions.y, rawDimensions.x);
+        }
+        // 否则返回原始尺寸
+        return rawDimensions;
+    }
+
+    // ========================================================
+    // 自动读取 (保存到 rawDimensions)
+    // ========================================================
+    [ContextMenu("自动读取箱子尺寸 (Auto Detect)")]
+    public void AutoDetectBoxSize()
+    {
+        if (boxReference == null)
+        {
+            Debug.LogError("❌ 请先拖入 'Box Reference'！");
+            return;
+        }
+
+        // 优先读取 Renderer (视觉包围盒)
+        Renderer ren = boxReference.GetComponent<Renderer>();
+        if (ren != null)
+        {
+            rawDimensions = ren.bounds.size;
+            Debug.Log($"✅ [Renderer] 读取原始尺寸: {rawDimensions}");
+            return;
+        }
+
+        // 其次读取 Collider
+        Collider col = boxReference.GetComponent<Collider>();
+        if (col != null)
+        {
+            rawDimensions = col.bounds.size;
+            Debug.Log($"✅ [Collider] 读取原始尺寸: {rawDimensions}");
+            return;
+        }
+    }
+
+    // ========================================================
+    // 计算放置点 (使用 FinalSize)
+    // ========================================================
     public Vector3 GetDropPosition(int index)
     {
-        float boxHalfSize = boxSize / 2f; // 中心点偏移量
+        Vector3 finalSize = GetFinalSize();
 
-        // ================================
-        // 【新增：加入 Y 轴 = 箱子高度一半】
-        // ================================
-        Vector3 localPos = new Vector3(
-            boxHalfSize,
-            boxHalfSize,  // ← 新增：让 Y 轴抬高半个箱子
-            boxHalfSize
-        );
+        float halfX = finalSize.x / 2f;
+        float halfY = finalSize.y / 2f;
+        float halfZ = finalSize.z / 2f;
 
-        // 转成世界坐标
+        Vector3 localPos = new Vector3(halfX, halfY, halfZ);
         return palletStartCorner.TransformPoint(localPos);
     }
 
     // ========================================================
-    // 【新增】在 Scene 视图绘制调试图形
+    // 可视化 (绿框会随选项改变形状)
     // ========================================================
     void OnDrawGizmos()
     {
@@ -35,17 +95,12 @@ public class PalletCalculator : MonoBehaviour
         Gizmos.color = Color.green;
         Gizmos.matrix = palletStartCorner.localToWorldMatrix;
 
-        float boxHalfSize = boxSize / 2f;
+        // 获取经过旋转处理后的最终尺寸
+        Vector3 finalSize = GetFinalSize();
 
-        // ================================
-        // 【新增：让 Gizmos 的中心点也包含 Y 轴】
-        // ================================
-        Vector3 localCenter = new Vector3(
-            boxHalfSize,
-            boxHalfSize, // ← 新增：让画出来的方块也在正确高度
-            boxHalfSize
+        Gizmos.DrawWireCube(
+            new Vector3(finalSize.x / 2f, finalSize.y / 2f, finalSize.z / 2f),
+            finalSize
         );
-
-        Gizmos.DrawWireCube(localCenter, new Vector3(boxSize, boxSize, boxSize));
     }
 }
