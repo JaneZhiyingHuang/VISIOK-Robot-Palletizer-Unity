@@ -29,18 +29,8 @@ public class GeometricSolver : MonoBehaviour
     public Transform j6Hand;
     public Transform gripperTip;
 
-    [Header("通用配置")]
-    [Tooltip("反转肘部弯曲方向")]
-    public bool invertElbow = false;
-
     [Header("J6 (吸盘) 自动对齐配置")]
     public J6AlignMode j6AxisMode = J6AlignMode.Align_World_X;
-
-    [Tooltip("如果吸盘转反了(加速旋转)，改成 -1")]
-    [Range(-1, 1)] public int j6Direction = 1;
-
-    [Tooltip("手动微调 J6 的初始角度")]
-    public float j6Offset = 0f;
 
     [Header("计算结果 (增量)")]
     public float[] outAngles = new float[6];
@@ -111,7 +101,7 @@ public class GeometricSolver : MonoBehaviour
     }
 
     // ==============================================================================
-    // 2. 主计算入口 (已修改 J6 逻辑)
+    // 2. 主计算入口
     // ==============================================================================
     public bool Solve(Vector3 targetPos, float placeRotationY = 0f)
     {
@@ -131,32 +121,23 @@ public class GeometricSolver : MonoBehaviour
         // --- J5: 抵消 J2 + J3 (垂直平衡) ---
         outAngles[4] = -(outAngles[1] + outAngles[2]);
 
-        // =======================================================
-        // 【J6 修改版】: 纯粹抵消 J1 (水平平衡) + 轴向切换
-        // =======================================================
+        // --- J6: 核心逻辑 (90 - J1) ---
+        float j6CounterRotate = -(90f - outAngles[0]);
 
-        // 1. 基础逻辑：J1 转多少，我就反着转多少
-        float j6CounterRotate = -(90-outAngles[0]) * j6Direction;
-
-        // 2. 轴向切换逻辑
-        // 假设初始状态下 J6 是对准 World X 的。
-        // 如果你现在选了 Align_World_Z，我们就需要在基础逻辑上多转 90 度。
         float axisOffset = 0f;
         if (j6AxisMode == J6AlignMode.Align_World_Z)
         {
-            // 如果你想对准 Z 轴，通常需要加/减 90 度
-            // 这里给个 90，如果方向不对可以在 Inspector 改 j6Offset
+            // 如果要对齐 Z 轴，需要再转 90 度
             axisOffset = 90f;
         }
 
-        // 3. 最终输出 = (抵消J1) + (轴向切换) + (放置旋转) + (手动微调)
-        outAngles[5] = j6CounterRotate + axisOffset + placeRotationY + j6Offset;
+        outAngles[5] = j6CounterRotate + axisOffset + placeRotationY;
 
         return true;
     }
 
     // ==============================================================================
-    // 3. 纯数学解算 (只算前3个，不再算 J6 向量)
+    // 3. 纯数学解算
     // ==============================================================================
     private float[] CalculateMathAngles(Vector3 targetPos)
     {
@@ -182,10 +163,8 @@ public class GeometricSolver : MonoBehaviour
         float angleB = Mathf.Acos(cosB) * Mathf.Rad2Deg;
 
         float j2Angle = alpha + angleA;
-        float j3Angle = angleB;
-        if (invertElbow) j3Angle = -angleB;
+        float j3Angle = angleB; // 已移除 invertElbow 判断，直接使用正解
 
-        // 只返回前3个，J6 已经在 Solve 里处理了
         return new float[] { j1Angle, j2Angle, j3Angle };
     }
 
@@ -207,7 +186,6 @@ public class GeometricSolver : MonoBehaviour
             Gizmos.color = Color.green;
             Gizmos.DrawLine(j2Shoulder.position, previewTarget.position);
 
-            // 画参考线
             Vector3 targetAxis = (j6AxisMode == J6AlignMode.Align_World_X) ? Vector3.right : Vector3.forward;
             Gizmos.color = (j6AxisMode == J6AlignMode.Align_World_X) ? Color.red : Color.blue;
             Gizmos.DrawRay(j6Transform.position, targetAxis * 1.0f);
