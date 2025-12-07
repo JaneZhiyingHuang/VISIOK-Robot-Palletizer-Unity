@@ -162,4 +162,24 @@ public class PhysicsRobotController : MonoBehaviour
 
         j.joint.spring = spring;
     }
+
+    void OnDrawGizmos()
+    {
+        if (joints == null) return;
+        foreach (var j in joints)
+        {
+            if (j.joint != null)
+            {
+                // 1. 画出关节的位置 (蓝球)
+                Gizmos.color = Color.blue;
+                Gizmos.DrawSphere(j.joint.transform.position, 0.05f);
+
+                // 2. 画出关节的旋转轴 (超长黄线) —— 这就是它旋转所围绕的那根“刺”
+                Gizmos.color = Color.yellow;
+                // 获取关节在世界空间下的轴向
+                Vector3 worldAxis = j.joint.transform.TransformDirection(j.joint.axis);
+                Gizmos.DrawRay(j.joint.transform.position, worldAxis * 2f);
+            }
+        }
+    }
 }

@@ -48,17 +48,17 @@ public class GripperController : MonoBehaviour
             attachedBox = null;
         }
     }
-
-    // 碰撞检测：当箱子进入感应区
-    private void OnTriggerEnter(Collider other)
+    // 【修改】把 OnTriggerEnter 改为 OnTriggerStay
+    // Stay 的好处是：只要它们还插在一起，boxInRange 就永远有值，
+    // 即使因为抖动导致 Enter/Exit 乱跳，Stay 也会在下一帧立刻补救回来。
+    private void OnTriggerStay(Collider other)
     {
-        if (other.CompareTag("Box")) // 检查Tag是不是Box
+        if (other.CompareTag("Box"))
         {
             boxInRange = other.transform;
         }
     }
 
-    // 碰撞检测：当箱子离开感应区
     private void OnTriggerExit(Collider other)
     {
         if (other.CompareTag("Box") && other.transform == boxInRange)

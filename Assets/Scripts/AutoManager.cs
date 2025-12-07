@@ -10,144 +10,165 @@ public class AutoManager : MonoBehaviour
     public PalletCalculator palletCalc;
 
     [Header("关键物体")]
-    public Transform j1Base;
-    public Transform j2Shoulder;
-    public Transform pickPoint;
+    public Transform pickPoint;     // 抓取点
+    public Transform j1Base;        // 仅用于 Gizmos 判断，防止报错
 
     [Header("参数调试")]
-    public float boxPlaceAngle = 0f;
-    public float hoverHeight = 0.4f; 
-
-    private float autoJ6Offset = 0f;
+    public float hoverHeight = 0.4f;   // 安全高度
+    public float boxPlaceAngle = 0f;   // 箱子放置时的旋转角度 (J6修正)
 
     // ========================================================
-    // 点位预测
+    // 1. 保留原先的 Gizmos 可视化 (4个点 + 连线)
     // ========================================================
     void OnDrawGizmos()
     {
         // 安全检查
-        if (pickPoint == null || palletCalc == null || j1Base == null) return;
+        if (pickPoint == null || palletCalc == null) return;
 
+        // 计算四个关键点位
         Vector3 p1_Pick = pickPoint.position;
         Vector3 p2_Lift = p1_Pick + Vector3.up * hoverHeight;
         Vector3 p4_Drop = palletCalc.GetDropPosition(0);
         Vector3 p3_Hover = p4_Drop + Vector3.up * hoverHeight;
 
-        Gizmos.color = Color.green; Gizmos.DrawSphere(p1_Pick, 0.05f);
-        Gizmos.color = Color.yellow; Gizmos.DrawSphere(p2_Lift, 0.05f);
-        Gizmos.color = new Color(1, 0.5f, 0); Gizmos.DrawSphere(p3_Hover, 0.05f);
-        Gizmos.color = Color.red; Gizmos.DrawSphere(p4_Drop, 0.05f);
+        // 绘制点 (球体)
+        Gizmos.color = Color.green; Gizmos.DrawSphere(p1_Pick, 0.05f); // 抓取点
+        Gizmos.color = Color.yellow; Gizmos.DrawSphere(p2_Lift, 0.05f); // 抬起点
+        Gizmos.color = new Color(1, 0.5f, 0); Gizmos.DrawSphere(p3_Hover, 0.05f); // 悬停点
+        Gizmos.color = Color.red; Gizmos.DrawSphere(p4_Drop, 0.05f); // 放置点
 
+        // 绘制连线 (路径预览)
         Gizmos.color = new Color(1, 1, 1, 0.5f);
         Gizmos.DrawLine(p1_Pick, p2_Lift);
+        Gizmos.DrawLine(p2_Lift, p3_Hover);
         Gizmos.DrawLine(p3_Hover, p4_Drop);
     }
 
     // ========================================================
-    // 运行逻辑 
+    // 2. 运行流程
     // ========================================================
     void Start()
     {
-        if (robotController.joints[0].joint != null && robotController.joints[5].joint != null)
-        {
-            float currentJ1 = robotController.joints[0].targetAngle;
-            float currentJ6 = robotController.joints[5].targetAngle;
-            autoJ6Offset = currentJ6 + currentJ1;
-        }
         StartCoroutine(RunOneBox());
     }
 
     IEnumerator RunOneBox()
     {
         Debug.Log("<color=cyan>=== 任务开始 ===</color>");
-        yield return new WaitForSeconds(1f);
 
+        // 给物理引擎一点时间初始化碰撞 (非常重要，防止Enter还没触发就PickUp)
+        yield return new WaitForSeconds(0.5f);
+
+        // 获取坐标
         Vector3 dropPos = palletCalc.GetDropPosition(0);
         Vector3 pickPos = pickPoint.position;
         Vector3 pickHover = pickPos + Vector3.up * hoverHeight;
         Vector3 dropHover = dropPos + Vector3.up * hoverHeight;
 
-        // 步骤 1: 抓取
-        Debug.Log("<color=yellow>步骤 1: 抓取 (Pick)</color>");
-        gripper.PickUp();
-        yield return new WaitForSeconds(2f);
+        // =====================================================
+        // Step 1: 抓取 (Pick) - 修正版
+        // =====================================================
+        Debug.Log($"<color=yellow>步骤 1: 直接抓取 (Pick)P{pickPos}</color>");
 
-        // 步骤 2: 抬起
+        gripper.PickUp(); // 直接抓！
+        yield return new WaitForSeconds(0.5f);
+
+        // =====================================================
+        // Step 2: 抬起 (Lift)
+        // =====================================================
         Debug.Log($"<color=yellow>步骤 2: 抬起到安全高度 {pickHover}</color>");
-        MoveRobotTo(pickHover, "Step 2: Lift"); 
-        yield return new WaitForSeconds(3.0f);
-        LogCurrentJointAngles("抬起后实际角度");
 
-        // 步骤 3: 飞行
-        Debug.Log($"<color=yellow>步骤 3: 飞向托盘上方 {dropHover}</color>");
-        MoveRobotTo(dropHover, "Step 3: Fly to Hover");
-        yield return new WaitForSeconds(3.0f);
-        LogCurrentJointAngles("到达悬停点实际角度");
-
-        // 步骤 4: 下降
-        Debug.Log($"<color=yellow>步骤 4: 下降放置 {dropPos}</color>");
-        MoveRobotTo(dropPos, "Step 4: Down to Drop");
+        // 抬起时，J6 保持 0 度 (初始角度)
+        MoveRobotTo(pickHover, 0f, "Step 2: Lift");
         yield return new WaitForSeconds(2.0f);
-        LogCurrentJointAngles("下降到底实际角度");
+        LogCurrentJointAngles("抬起后状态");
 
-        // 步骤 5: 放下
+        // =====================================================
+        // Step 3: 飞向托盘 (Fly)
+        // =====================================================
+        Debug.Log($"<color=yellow>步骤 3: 飞向托盘上方 {dropHover}</color>");
+        MoveRobotTo(dropHover, boxPlaceAngle, "Step 3: Fly to Hover");
+        yield return new WaitForSeconds(3.0f);
+        LogCurrentJointAngles("悬停点状态");
+
+        // =====================================================
+        // Step 4: 下降 (Down)
+        // =====================================================
+        Debug.Log($"<color=yellow>步骤 4: 下降放置 {dropPos}</color>");
+        MoveRobotTo(dropPos, boxPlaceAngle, "Step 4: Down to Drop");
+        yield return new WaitForSeconds(2.0f);
+        LogCurrentJointAngles("放置点状态");
+
+        // =====================================================
+        // Step 5: 放下 (Release)
+        // =====================================================
         Debug.Log("<color=yellow>步骤 5: 放下 (Release)</color>");
         gripper.Release();
         yield return new WaitForSeconds(0.5f);
 
-        // 步骤 6: 离开
+        // =====================================================
+        // Step 6: 离开 (Retract)
+        // =====================================================
         Debug.Log("<color=yellow>步骤 6: 离开 (Retract)</color>");
-        MoveRobotTo(dropHover, "Step 6: Retract");
+        MoveRobotTo(dropHover, boxPlaceAngle, "Step 6: Retract");
         yield return new WaitForSeconds(2.0f);
 
         Debug.Log("<color=cyan>=== 任务结束 ===</color>");
     }
 
-    // --- 移动函数 ---
-    void MoveRobotTo(Vector3 targetPos, string stepName)
+    // ========================================================
+    // 3. 移动逻辑 (适配新的 GeometricSolver)
+    // ========================================================
+    void MoveRobotTo(Vector3 targetPos, float rotationY, string stepName)
     {
-        solver.Solve(targetPos, j1Base, j2Shoulder);
-
-        Debug.Log($"[{stepName}] 目标坐标: {targetPos}\n" +
-                  $">>> 计算目标角度:\n" +
-                  $"J1: {solver.outAngles[0]:F2}, J2: {solver.outAngles[1]:F2}, J3: {solver.outAngles[2]:F2}, J5: {solver.outAngles[4]:F2}");
-
-        var joints = robotController.joints;
-        if (joints.Length >= 6)
+        // 调用 Solver (现在支持传入 rotationY 来控制 J6)
+        if (!solver.Solve(targetPos, rotationY))
         {
-            if (joints[0].joint != null) joints[0].targetAngle = solver.outAngles[0];
-            if (joints[1].joint != null) joints[1].targetAngle = solver.outAngles[1];
-            if (joints[2].joint != null) joints[2].targetAngle = solver.outAngles[2];
+            Debug.LogError($"[IK失败] {stepName}: 目标 {targetPos} 超出范围或无法到达！");
+            return;
+        }
 
-            if (joints[4].joint != null) joints[4].targetAngle = solver.outAngles[4];
-
-            if (joints[5].joint != null)
+        // 将求出的角度写入关节驱动
+        for (int i = 0; i < 6; i++)
+        {
+            if (i < robotController.joints.Length)
             {
-                float targetJ1 = solver.outAngles[0];
-                float targetJ6 = (boxPlaceAngle - targetJ1) + autoJ6Offset;
-                while (targetJ6 > 180) targetJ6 -= 360;
-                while (targetJ6 < -180) targetJ6 += 360;
-                joints[5].targetAngle = targetJ6;
-
-                Debug.Log($"J6 计算: 目标({boxPlaceAngle}) - J1({targetJ1:F2}) = {targetJ6:F2}");
+                robotController.joints[i].targetAngle = solver.outAngles[i];
             }
         }
     }
 
-    // --- 打印当前实际物理角度 ---
+    // ========================================================
+    // 4. 保留原先的 Log 调试函数
+    // ========================================================
     void LogCurrentJointAngles(string context)
     {
-        var joints = robotController.joints;
-        if (joints.Length < 6) return;
+        Debug.Log($"\n—— {context} ——");
 
-        // 获取 HingeJoint 当前的物理角度 (angle)
-        float j1 = joints[0].joint != null ? joints[0].joint.angle : 0;
-        float j2 = joints[1].joint != null ? joints[1].joint.angle : 0;
-        float j3 = joints[2].joint != null ? joints[2].joint.angle : 0;
-        float j5 = joints[4].joint != null ? joints[4].joint.angle : 0;
-        float j6 = joints[5].joint != null ? joints[5].joint.angle : 0;
+        // 打印当前末端世界坐标
+        if (solver != null && solver.gripperTip != null)
+        {
+            Vector3 currentPos = solver.gripperTip.position;
+            // 保留4位小数，方便看精度
+            Debug.Log($"<color=green>【当前末端坐标】 World: {currentPos.ToString("F4")}</color>");
+        }
 
-        Debug.Log($"<color=orange>[物理反馈 - {context}]</color>\n" +
-                  $"J1: {j1:F2}, J2: {j2:F2}, J3: {j3:F2}, J5: {j5:F2}, J6: {j6:F2}");
+        // 打印每个关节的 目标值 vs 实际值
+        for (int i = 0; i < robotController.joints.Length; i++)
+        {
+            if (robotController.joints[i].joint == null) continue;
+
+            // 获取当前物理角度 (-180 ~ 180)
+            float actual = robotController.joints[i].joint.transform.localEulerAngles.z;
+            if (actual > 180) actual -= 360;
+
+            float target = robotController.joints[i].targetAngle;
+            float error = Mathf.Abs(actual - target);
+
+            // 如果误差大于 5 度，用红色高亮显示，方便排查物理卡顿
+            string color = error > 5f ? "red" : "white";
+
+            Debug.Log($"<color={color}>J{i + 1}: 目标={target:F1}° / 实际={actual:F1}° (误差:{error:F1})</color>");
+        }
     }
 }
