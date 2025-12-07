@@ -40,7 +40,6 @@ public class AutoManager : MonoBehaviour
             var j = robotController.joints[i];
             if (j.joint != null)
             {
-                // 使用提取出的辅助函数，代码更简洁
                 initialJointAngles[i] = GetJointRawAngle(j.joint);
             }
         }
@@ -87,14 +86,25 @@ public class AutoManager : MonoBehaviour
         gripper.Release();
         yield return new WaitForSeconds(0.5f);
 
-        // Step 6: Retract
-        Debug.Log("<color=yellow>步骤 6: 撤回</color>");
+        // Step 6: Retract (安全撤回到悬停高度)
+        Debug.Log("<color=yellow>步骤 6: 撤回 (安全高度)</color>");
         MoveRobotTo(dropHover, boxPlaceAngle, "Step 6");
-        yield return new WaitForSeconds(2.0f);
+        yield return new WaitForSeconds(1.5f);
+
+        // ========================================================
+        // 【新增】Step 7: 归位 (Return Home)
+        // ========================================================
+        Debug.Log("<color=yellow>步骤 7: 归位 (回到初始姿态)</color>");
+        MoveRobotHome(); // 调用新增的归位函数
+        yield return new WaitForSeconds(3.0f);
+        LogCurrentJointAngles("归位后状态");
 
         Debug.Log("<color=cyan>=== 任务结束 ===</color>");
     }
 
+    // --------------------------------------------------------
+    // 【IK 移动逻辑】
+    // --------------------------------------------------------
     void MoveRobotTo(Vector3 targetPos, float rotationY, string stepName)
     {
         if (!solver.Solve(targetPos, rotationY))
@@ -106,6 +116,19 @@ public class AutoManager : MonoBehaviour
         {
             if (i < robotController.joints.Length)
                 robotController.joints[i].targetAngle = solver.outAngles[i];
+        }
+    }
+
+    // --------------------------------------------------------
+    // 【新增】归位逻辑：直接让所有关节回到 StartAngle
+    // --------------------------------------------------------
+    void MoveRobotHome()
+    {
+        for (int i = 0; i < robotController.joints.Length; i++)
+        {
+            // 将目标角度设回 Controller 里记录的 startAngle
+            // 因为我们的逻辑是 Delta 增量，StartAngle 通常就是“0位”
+            robotController.joints[i].targetAngle = robotController.joints[i].startAngle;
         }
     }
 
@@ -123,22 +146,14 @@ public class AutoManager : MonoBehaviour
 
         for (int i = 0; i < robotController.joints.Length; i++)
         {
-            // 【关键修改】只显示前4个关节 (J1-J4)，跳过 J5(4) 和 J6(5)
             if (i >= 4) continue;
 
             var jointControl = robotController.joints[i];
             if (jointControl.joint == null) continue;
 
-            // 1. 获取当前原始角度 (调用辅助函数)
             float currentRaw = GetJointRawAngle(jointControl.joint);
-
-            // 2. 获取初始原始角度
             float initRaw = initialJointAngles[i];
-
-            // 3. 计算相对角度
             float actualRelative = Mathf.DeltaAngle(initRaw, currentRaw);
-
-            // 4. 计算误差
             float target = jointControl.targetAngle;
             float error = Mathf.Abs(actualRelative - target);
 
@@ -147,9 +162,6 @@ public class AutoManager : MonoBehaviour
         }
     }
 
-    // ========================================================
-    // 辅助函数：智能读取关节角度 (X/Y/Z)
-    // ========================================================
     float GetJointRawAngle(HingeJoint joint)
     {
         Vector3 axis = joint.axis;
