@@ -174,3 +174,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 463c653b0c8f94b2f96a37e205b3cadd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  targetPoint: {fileID: 0}
+  boxCenterReference: {fileID: 7326955232635364604}
+  invertDirection: 1
+  moveSpeed: 0.5

@@ -3,7 +3,9 @@ using UnityEngine;
 public class BoxMover : MonoBehaviour
 {
     [Header("必须配置")]
+    [Tooltip("箱子要去的目标点 (世界坐标)")]
     public Transform targetPoint;
+    [Tooltip("箱子的几何中心 (用于对齐)")]
     public Transform boxCenterReference;
 
     [Header("设置")]
@@ -16,7 +18,7 @@ public class BoxMover : MonoBehaviour
 
     void Start()
     {
-        // 刚开始先算一次 (可能会算到旧的坐标，没关系，后面会被校准器修正)
+        // 刚开始先算一次
         CalculatePath();
     }
 
@@ -25,7 +27,7 @@ public class BoxMover : MonoBehaviour
     // ========================================================
     public void RecalculateDestination()
     {
-        Debug.Log($"[BoxMover] 收到校准信号，正在更新终点...");
+        // Debug.Log($"[BoxMover] 收到校准信号，正在更新终点...");
         CalculatePath();
     }
 
@@ -33,16 +35,21 @@ public class BoxMover : MonoBehaviour
     {
         if (targetPoint == null || boxCenterReference == null) return;
 
+        // 1. 强制关闭物理模拟，防止干扰移动
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null) rb.isKinematic = true;
 
-        Vector3 offset = boxCenterReference.position - transform.position;
+        // 2. 【核心修改】计算世界坐标系下的偏移量
+        Vector3 worldOffset = boxCenterReference.position - transform.position;
 
-        // 此时读取的 targetPoint.position 已经是校准器修改过的新坐标了
-        float targetX = targetPoint.position.x - offset.x;
-        float targetZ = targetPoint.position.z - offset.z;
+        // 3. 计算轴心 (Pivot) 最终应该在的世界坐标
+        float targetX = targetPoint.position.x - worldOffset.x;
+        float targetZ = targetPoint.position.z - worldOffset.z;
+
+        // 保持当前的 Y 轴高度 (世界坐标)
         float fixedY = transform.position.y;
 
+        // 4. 组装最终的世界坐标终点
         finalDestination = new Vector3(targetX, fixedY, targetZ);
 
         isMoving = true;
@@ -54,18 +61,58 @@ public class BoxMover : MonoBehaviour
     {
         if (!isMoving) return;
 
+        // 1. 步长计算
         float step = moveSpeed * Time.deltaTime;
+
+        // 2. 使用 MoveTowards 在世界坐标系中移动
         transform.position = Vector3.MoveTowards(transform.position, finalDestination, step);
 
+        // 3. 判断到达 (使用世界坐标距离)
         if (Vector3.Distance(transform.position, finalDestination) < 0.001f)
         {
+            // 强制吸附，消除浮点误差
             transform.position = finalDestination;
+
             isMoving = false;
             IsArrived = true;
-            Debug.Log("✅ 箱子中心已对齐，停止。");
+
+            // ===========================================================
+            // 【新增逻辑】到位后恢复物理，让机械臂 Gripper 能感应到！
+            // ===========================================================
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = false; // 恢复物理感应
+                rb.WakeUp();            // 强制唤醒，确保碰撞检测立即生效
+                // 如果需要重力让它贴合地面，可以把下面这行取消注释
+                // rb.useGravity = true; 
+            }
+            // ===========================================================
+
+            Debug.Log("✅ 箱子中心已对齐，物理已恢复，停止。");
             this.enabled = false;
         }
     }
 
-    // OnDrawGizmos...
+    // ========================================================
+    // 添加可视化辅助线 (Gizmos)
+    // ========================================================
+    void OnDrawGizmos()
+    {
+        if (boxCenterReference != null && targetPoint != null)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawSphere(boxCenterReference.position, 0.03f);
+
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(targetPoint.position, 0.03f);
+
+            if (isMoving || Application.isPlaying)
+            {
+                Gizmos.color = Color.yellow;
+                Vector3 projectedCenterDest = new Vector3(targetPoint.position.x, boxCenterReference.position.y, targetPoint.position.z);
+                Gizmos.DrawLine(boxCenterReference.position, projectedCenterDest);
+            }
+        }
+    }
 }
