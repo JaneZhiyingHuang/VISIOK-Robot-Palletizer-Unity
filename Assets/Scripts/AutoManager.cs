@@ -51,7 +51,7 @@ public class AutoManager : MonoBehaviour
     IEnumerator RunOneBox()
     {
         Debug.Log("<color=cyan>=== 任务开始 ===</color>");
-        yield return new WaitForSeconds(20f);
+        yield return new WaitForSeconds(10f);
 
         Vector3 dropPos = palletCalc.GetDropPosition(0);
         Vector3 pickPos = pickPoint.position;
