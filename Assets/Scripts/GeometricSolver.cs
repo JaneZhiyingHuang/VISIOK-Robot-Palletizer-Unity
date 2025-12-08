@@ -163,7 +163,7 @@ public class GeometricSolver : MonoBehaviour
         float angleB = Mathf.Acos(cosB) * Mathf.Rad2Deg;
 
         float j2Angle = alpha + angleA;
-        float j3Angle = angleB; // 已移除 invertElbow 判断，直接使用正解
+        float j3Angle = angleB; 
 
         return new float[] { j1Angle, j2Angle, j3Angle };
     }

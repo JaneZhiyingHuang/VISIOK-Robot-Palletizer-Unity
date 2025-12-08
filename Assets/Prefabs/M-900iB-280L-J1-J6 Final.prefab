@@ -14845,8 +14845,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.13608254, y: 0.13380897, z: 0.22162314}
-  m_Center: {x: -0.0068518417, y: 0.013900594, z: -0.112}
+  m_Size: {x: 0.14540255, y: 0.14086518, z: 0.22162314}
+  m_Center: {x: 0.0016995938, y: 0.010372481, z: -0.11200001}
 --- !u!114 &7424856812461703899
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15548,7 +15548,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   palletStartCorner: {fileID: 0}
-  boxSize: 0.5
+  boxReference: {fileID: 0}
+  rawDimensions: {x: 0.5, y: 0.5, z: 0.5}
+  placementOrientation: 0
 --- !u!1 &9000291748011428569
 GameObject:
   m_ObjectHideFlags: 0
