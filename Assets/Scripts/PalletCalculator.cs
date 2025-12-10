@@ -8,8 +8,8 @@ public class PalletCalculator : MonoBehaviour
     // ==========================================
     public enum BoxOrientation
     {
-        [InspectorName("默认方向 (长对长)")] Align_X,
-        [InspectorName("旋转90度 (交换长宽)")] Align_Z_Rotated
+        [InspectorName("Z")] Align_X,
+        [InspectorName("X")] Align_Z_Rotated
     }
 
     [Header("核心引用")]
@@ -18,7 +18,7 @@ public class PalletCalculator : MonoBehaviour
 
     [Header("托盘设置")]
     [Tooltip("托盘有效区域大小 (x=长, y=深/Z)")]
-    public Vector2 palletSize = new Vector2(1.2f, 1.0f); // 标准欧标托盘示例
+    public Vector2 palletSize = new Vector2(1.2f, 1.0f); 
 
     [Tooltip("箱子之间的间隙")]
     public float gap = 0.01f;

@@ -4516,8 +4516,8 @@ HingeJoint:
   serializedVersion: 2
   m_UseSpring: 0
   m_Spring:
-    spring: 10000
-    damper: 1001
+    spring: 1000
+    damper: 100
     targetPosition: 0
   m_UseMotor: 0
   m_Motor:
@@ -4528,8 +4528,8 @@ HingeJoint:
   m_ExtendedLimits: 0
   m_UseAcceleration: 0
   m_Limits:
-    min: 0
-    max: 0
+    min: 181.07356
+    max: 360.15826
     bounciness: 0
     bounceMinVelocity: 0.2
     contactDistance: 0
@@ -6859,8 +6859,8 @@ HingeJoint:
   m_ExtendedLimits: 0
   m_UseAcceleration: 0
   m_Limits:
-    min: 0
-    max: 0
+    min: 160.54095
+    max: 314.1279
     bounciness: 0
     bounceMinVelocity: 0.2
     contactDistance: 0
@@ -11639,8 +11639,8 @@ HingeJoint:
   m_ExtendedLimits: 0
   m_UseAcceleration: 0
   m_Limits:
-    min: 0
-    max: 0
+    min: -0.5595251
+    max: -0.5595251
     bounciness: 0
     bounceMinVelocity: 0.2
     contactDistance: 0
@@ -15499,10 +15499,12 @@ MonoBehaviour:
   gripper: {fileID: 7424856812461703899}
   solver: {fileID: 5758572957566153230}
   palletCalc: {fileID: 980813776531106678}
+  boxFeeder: {fileID: 0}
   pickPoint: {fileID: 0}
   j1Base: {fileID: 7025821005815583797}
   hoverHeight: 0.4
   boxPlaceAngle: 0
+  startDelay: 5
 --- !u!114 &5758572957566153230
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15548,9 +15550,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   palletStartCorner: {fileID: 0}
+  palletSize: {x: 1.2, y: 1}
+  gap: 0.01
   boxReference: {fileID: 0}
   rawDimensions: {x: 0.5, y: 0.5, z: 0.5}
   placementOrientation: 0
+  _capacityX: 0
+  _capacityZ: 0
+  _totalCapacity: 0
 --- !u!1 &9000291748011428569
 GameObject:
   m_ObjectHideFlags: 0
