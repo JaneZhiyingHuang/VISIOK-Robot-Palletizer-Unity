@@ -18,7 +18,7 @@ public class PalletCalculator : MonoBehaviour
 
     [Header("托盘设置")]
     [Tooltip("托盘有效区域大小 (x=长, y=深/Z)")]
-    public Vector2 palletSize = new Vector2(1.2f, 1.0f); 
+    public Vector2 palletSize = new Vector2(1.2f, 1.01f); 
 
     [Tooltip("箱子之间的间隙")]
     public float gap = 0.01f;
