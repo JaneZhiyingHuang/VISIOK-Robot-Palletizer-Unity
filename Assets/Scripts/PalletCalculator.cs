@@ -8,8 +8,8 @@ public class PalletCalculator : MonoBehaviour
     // ==========================================
     public enum BoxOrientation
     {
-        [InspectorName("Z")] Align_X,
-        [InspectorName("X")] Align_Z_Rotated
+        [InspectorName("Rotate 90°")] Align_X,
+        [InspectorName("Default")] Align_Z_Rotated
     }
 
     [Header("核心引用")]
@@ -18,7 +18,7 @@ public class PalletCalculator : MonoBehaviour
 
     [Header("托盘设置")]
     [Tooltip("托盘有效区域大小 (x=长, y=深/Z)")]
-    public Vector2 palletSize = new Vector2(1.2f, 1.01f); 
+    public Vector2 palletSize = new Vector2(1.2f, 1.0f); 
 
     [Tooltip("箱子之间的间隙")]
     public float gap = 0.01f;
@@ -118,6 +118,15 @@ public class PalletCalculator : MonoBehaviour
 
         Debug.LogWarning($"请求的索引 {index} 超出了托盘容量 {_totalCapacity}");
         return Vector3.zero; // 或者返回最后一个点
+    }
+
+    // ========================================================
+    // 【新增】获取当前摆放模式需要的旋转角度 (Y轴)
+    // ========================================================
+    public float GetCurrentRotationY()
+    {
+        // 如果枚举选的是 Rotate 90，就返回 90度，否则 0度
+        return placementOrientation == BoxOrientation.Align_Z_Rotated ? 0f : 90f;
     }
 
     // ========================================================

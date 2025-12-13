@@ -65,13 +65,17 @@ public class AutoManager : MonoBehaviour
         List<Vector3> allPoints = palletCalc.CalculateAllPoints();
         int totalCount = allPoints.Count;
 
+        // 【新增】直接问 Calculator：这一批箱子要旋转多少度？
+        float currentJobAngle = palletCalc.GetCurrentRotationY();
+
         Debug.Log($"托盘规划了 {totalCount} 个箱子位。");
 
         for (int i = 0; i < totalCount; i++)
         {
             Debug.Log($"<color=orange>>> 处理第 {i + 1} / {totalCount} 个箱子 <<</color>");
             currentTargetPos = allPoints[i];
-            yield return StartCoroutine(RunSingleBoxSequence(currentTargetPos));
+            // 【修改】把角度 currentJobAngle 传进去
+            yield return StartCoroutine(RunSingleBoxSequence(currentTargetPos, currentJobAngle));
             yield return new WaitForSeconds(0.5f);
         }
 
@@ -80,7 +84,7 @@ public class AutoManager : MonoBehaviour
     // ========================================================
     // 【改动】单次流程：接收目标位置作为参数
     // ========================================================
-    IEnumerator RunSingleBoxSequence(Vector3 targetPos)
+    IEnumerator RunSingleBoxSequence(Vector3 targetPos, float rotationY)
     {
         Vector3 pickPos = pickPoint.position;
         Vector3 pickHover = pickPos + Vector3.up * hoverHeight;
@@ -118,14 +122,14 @@ public class AutoManager : MonoBehaviour
         }
 
         // Step 3: Fly (移动到托盘上方)
-        Debug.Log($"步骤 3: 移动至托盘上方");
-        MoveRobotTo(dropHover, boxPlaceAngle, "Step 3");
+        Debug.Log($"步骤 3: 移动至托盘上方 (角度: {rotationY})");
+        // 这里把原来的 boxPlaceAngle 换成 rotationY
+        MoveRobotTo(dropHover, rotationY, "Step 3");
         yield return new WaitForSeconds(1.5f);
-        LogCurrentJointAngles("悬停点状态");
 
         // Step 4: Down (下降)
         Debug.Log($"步骤 4: 下降");
-        MoveRobotTo(targetPos, boxPlaceAngle, "Step 4");
+        MoveRobotTo(targetPos, rotationY, "Step 4");
         yield return new WaitForSeconds(1.0f);
         LogCurrentJointAngles("放置点状态");
 
@@ -135,8 +139,8 @@ public class AutoManager : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
 
         // Step 6: Retract (撤回)
-        Debug.Log("步骤 6: 撤回");
-        MoveRobotTo(dropHover, boxPlaceAngle, "Step 6");
+        // 撤回时最好保持同样的角度，防止碰到旁边的箱子
+        MoveRobotTo(dropHover, rotationY, "Step 6");
         yield return new WaitForSeconds(1.5f);
 
         // Step 7: 归位 (Return Home)
