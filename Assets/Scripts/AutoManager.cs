@@ -21,7 +21,7 @@ public class AutoManager : MonoBehaviour
 
     [Header("启动设置")]
     [Tooltip("游戏开始后，等待几秒再开始第一次抓取？(给第一个箱子留出生成和移动的时间)")]
-    public float startDelay = 5.0f; // 建议设为 4~6秒
+    public float startDelay = 5.0f;
 
     private float[] initialJointAngles;
     private Vector3 currentTargetPos;
@@ -29,19 +29,16 @@ public class AutoManager : MonoBehaviour
     void Start()
     {
         RecordInitialAngles();
-
-        // 【改动】不直接启动，而是通过协程延迟启动
         StartCoroutine(StartDelayedJob());
     }
 
     // ========================================================
-    // 【新增】延迟启动协程
+    // 延迟启动协程
     // ========================================================
     IEnumerator StartDelayedJob()
     {
         Debug.Log($"⏳ [系统预热] 正在等待 {startDelay} 秒，让第1个箱子就位...");
 
-        // 这里就是你想要的“隔一段时间再开始”
         yield return new WaitForSeconds(startDelay);
 
         Debug.Log("🔥 [系统启动] 开始执行抓取任务！");
@@ -60,40 +57,59 @@ public class AutoManager : MonoBehaviour
         }
     }
 
+    // ========================================================
+    // 【修改】执行整个托盘的任务 (支持多层自动变角度)
+    // ========================================================
     IEnumerator RunFullPalletJob()
     {
+        // 1. 获取所有层、所有箱子的坐标列表
         List<Vector3> allPoints = palletCalc.CalculateAllPoints();
         int totalCount = allPoints.Count;
 
-        // 【新增】直接问 Calculator：这一批箱子要旋转多少度？
-        float currentJobAngle = palletCalc.GetCurrentRotationY();
-
         Debug.Log($"托盘规划了 {totalCount} 个箱子位。");
+
+        // 我们需要知道每个箱子的高度，以便反算它属于第几层
+        // (注意：这里假设所有箱子高度一致，如果不一致需要改逻辑)
+        float singleBoxHeight = palletCalc.rawDimensions.y;
+
+        // 托盘底部的 Y 坐标 (世界坐标)
+        float palletBaseY = palletCalc.palletStartCorner.position.y;
 
         for (int i = 0; i < totalCount; i++)
         {
             Debug.Log($"<color=orange>>> 处理第 {i + 1} / {totalCount} 个箱子 <<</color>");
             currentTargetPos = allPoints[i];
-            // 【修改】把角度 currentJobAngle 传进去
-            yield return StartCoroutine(RunSingleBoxSequence(currentTargetPos, currentJobAngle));
+
+            // 2. 【核心修改】动态计算当前这个箱子需要的旋转角度
+
+            // A. 算出当前箱子相对于托盘底部的相对高度
+            float relativeY = currentTargetPos.y - palletBaseY;
+
+            // B. 算出这是第几层 (0, 1, 2...)
+            // 比如相对高度 0.14(半高) -> 0.14/0.28 = 0.5 -> floor = 0层
+            // 比如相对高度 0.42(一层半) -> 0.42/0.28 = 1.5 -> floor = 1层
+            int currentLayerIndex = Mathf.FloorToInt(relativeY / singleBoxHeight);
+
+            // C. 问 PalletCalculator 这一层应该转多少度
+            float dynamicAngle = palletCalc.GetRotationForLayer(currentLayerIndex);
+
+            // 3. 把算出来的 dynamicAngle 传给单次任务
+            yield return StartCoroutine(RunSingleBoxSequence(currentTargetPos, dynamicAngle));
+
             yield return new WaitForSeconds(0.5f);
         }
 
         Debug.Log("<color=cyan>=== 任务结束 ===</color>");
     }
+
     // ========================================================
-    // 【改动】单次流程：接收目标位置作为参数
+    // 单次流程：接收目标位置作为参数
     // ========================================================
     IEnumerator RunSingleBoxSequence(Vector3 targetPos, float rotationY)
     {
         Vector3 pickPos = pickPoint.position;
         Vector3 pickHover = pickPos + Vector3.up * hoverHeight;
         Vector3 dropHover = targetPos + Vector3.up * hoverHeight;
-
-        //// Step0: 移动到抓取点，但不触发 J6 转动
-        //Debug.Log("步骤 0: 移动到抓取点 (保持gripper角度)");
-        //MoveRobotTo(pickPos, 0f, "Step 0");
-        //yield return new WaitForSeconds(1.0f);
 
         // Step 1: Pick (抓取)
         Debug.Log($"步骤 1: 抓取");
@@ -108,8 +124,7 @@ public class AutoManager : MonoBehaviour
         LogCurrentJointAngles("抬起后状态");
 
         // ========================================================
-        // 【关键逻辑】通知 Feeder 补货
-        // 此时箱子已经腾空，PickPoint 空出来了
+        // 通知 Feeder 补货
         // ========================================================
         if (boxFeeder != null)
         {
@@ -122,8 +137,8 @@ public class AutoManager : MonoBehaviour
         }
 
         // Step 3: Fly (移动到托盘上方)
+        // 注意：这里已经使用了传入的 rotationY
         Debug.Log($"步骤 3: 移动至托盘上方 (角度: {rotationY})");
-        // 这里把原来的 boxPlaceAngle 换成 rotationY
         MoveRobotTo(dropHover, rotationY, "Step 3");
         yield return new WaitForSeconds(1.5f);
 
@@ -139,14 +154,12 @@ public class AutoManager : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
 
         // Step 6: Retract (撤回)
-        // 撤回时最好保持同样的角度，防止碰到旁边的箱子
         MoveRobotTo(dropHover, rotationY, "Step 6");
         yield return new WaitForSeconds(1.5f);
 
         // Step 7: 归位 (Return Home)
         Debug.Log("步骤 7: 归位");
         MoveRobotHome();
-        // 归位时间可以稍微久一点，确保机器人回到初始姿态，准备好去抓刚生成的那个新箱子
         yield return new WaitForSeconds(2.5f);
         LogCurrentJointAngles("归位后状态");
     }
@@ -167,8 +180,6 @@ public class AutoManager : MonoBehaviour
                 robotController.joints[i].targetAngle = solver.outAngles[i];
         }
     }
-
-
 
     void MoveRobotHome()
     {
@@ -218,7 +229,7 @@ public class AutoManager : MonoBehaviour
     }
 
     // ========================================================
-    // Gizmos (更新：显示当前动态目标)
+    // Gizmos (显示当前动态目标)
     // ========================================================
     void OnDrawGizmos()
     {
