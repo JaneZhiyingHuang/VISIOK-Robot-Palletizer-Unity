@@ -85,6 +85,13 @@ public class PalletCalculator : MonoBehaviour
     // ========================================================
     // 3. 核心计算逻辑：算出所有合法的放置点位 (支持多层)
     // ========================================================
+
+    public int GetMaxSafeLayers()
+    {
+        if (rawDimensions.y <= 0.001f) return 1;
+        return Mathf.FloorToInt(safeHeight / rawDimensions.y);
+    }
+
     public List<Vector3> CalculateAllPoints()
     {
         List<Vector3> points = new List<Vector3>();
@@ -93,7 +100,7 @@ public class PalletCalculator : MonoBehaviour
         if (rawDimensions.y <= 0.001f) return points; // 防止高度为0死循环
 
         // A. 计算最大允许层数
-        _calculatedMaxLayers = Mathf.FloorToInt(safeHeight / rawDimensions.y);
+        _calculatedMaxLayers = GetMaxSafeLayers();
 
         // B. 确定实际要生成的层数 (取 Min)
         int actualLayers = Mathf.Min(targetLayers, _calculatedMaxLayers);
