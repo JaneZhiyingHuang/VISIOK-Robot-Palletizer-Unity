@@ -8,8 +8,8 @@ public class PalletCalculator : MonoBehaviour
     // ==========================================
     public enum BoxOrientation
     {
-        [InspectorName("Rotate 90°")] Align_X,         // 对应 Inspector 的 Rotate 90
-        [InspectorName("Default")] Align_Z_Rotated     // 对应 Inspector 的 Default
+        [InspectorName("Rotate 90°")] Align_X,         
+        [InspectorName("Default")] Align_Z_Rotated     
     }
 
     [Header("核心引用")]
@@ -32,7 +32,7 @@ public class PalletCalculator : MonoBehaviour
 
     [Header("计算结果预览 (只读)")]
     [Tooltip("根据安全高度算出的最大允许层数")]
-    [SerializeField] private int _calculatedMaxLayers; // 只读预览
+    [SerializeField] private int _calculatedMaxLayers; 
     [SerializeField] private int _capacityPerLayerX;
     [SerializeField] private int _capacityPerLayerZ;
     [SerializeField] private int _totalBoxes;

@@ -29,6 +29,10 @@ public class AutoManager : MonoBehaviour
     void Start()
     {
         RecordInitialAngles();
+    }
+
+    public void BeginWork()
+    {
         StartCoroutine(StartDelayedJob());
     }
 
@@ -120,7 +124,7 @@ public class AutoManager : MonoBehaviour
         Debug.Log($"步骤 2: 抬起");
         MoveRobotTo(pickHover, 0f, "Step 2");
         // 等待抬起动作完成 (稍微多给一点时间确保完全离开底座)
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(1f);
         LogCurrentJointAngles("抬起后状态");
 
         // ========================================================
@@ -140,12 +144,12 @@ public class AutoManager : MonoBehaviour
         // 注意：这里已经使用了传入的 rotationY
         Debug.Log($"步骤 3: 移动至托盘上方 (角度: {rotationY})");
         MoveRobotTo(dropHover, rotationY, "Step 3");
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(1f);
 
         // Step 4: Down (下降)
         Debug.Log($"步骤 4: 下降");
         MoveRobotTo(targetPos, rotationY, "Step 4");
-        yield return new WaitForSeconds(1.0f);
+        yield return new WaitForSeconds(0.5f);
         LogCurrentJointAngles("放置点状态");
 
         // Step 5: Release (放下)
@@ -155,12 +159,12 @@ public class AutoManager : MonoBehaviour
 
         // Step 6: Retract (撤回)
         MoveRobotTo(dropHover, rotationY, "Step 6");
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(1f);
 
         // Step 7: 归位 (Return Home)
         Debug.Log("步骤 7: 归位");
         MoveRobotHome();
-        yield return new WaitForSeconds(2.5f);
+        yield return new WaitForSeconds(2f);
         LogCurrentJointAngles("归位后状态");
     }
 

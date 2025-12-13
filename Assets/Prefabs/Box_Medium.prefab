@@ -176,4 +176,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   targetPoint: {fileID: 0}
   boxCenterReference: {fileID: 8701010166132917172}
-  moveSpeed: 0.5
+  moveSpeed: 0.7
