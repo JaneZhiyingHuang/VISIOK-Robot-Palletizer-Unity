@@ -86,10 +86,10 @@ public class AutoManager : MonoBehaviour
         Vector3 pickHover = pickPos + Vector3.up * hoverHeight;
         Vector3 dropHover = targetPos + Vector3.up * hoverHeight;
 
-        // Step0: 移动到抓取点，但不触发 J6 转动
-        Debug.Log("步骤 0: 移动到抓取点 (保持gripper角度)");
-        MoveRobotTo(pickPos, 0f, "Step 0", updateJ6: false,lockJ1: true);
-        yield return new WaitForSeconds(1.0f);
+        //// Step0: 移动到抓取点，但不触发 J6 转动
+        //Debug.Log("步骤 0: 移动到抓取点 (保持gripper角度)");
+        //MoveRobotTo(pickPos, 0f, "Step 0");
+        //yield return new WaitForSeconds(1.0f);
 
         // Step 1: Pick (抓取)
         Debug.Log($"步骤 1: 抓取");
@@ -150,28 +150,15 @@ public class AutoManager : MonoBehaviour
     // --------------------------------------------------------
     // IK 与 移动逻辑 (保持不变)
     // --------------------------------------------------------
-    void MoveRobotTo(
-        Vector3 targetPos,
-        float rotationY,
-        string stepName,
-        bool updateJ6 = true,
-        bool lockJ1 = false   
-    )
+    void MoveRobotTo(Vector3 targetPos, float rotationY, string stepName)
     {
-        if (!solver.Solve(targetPos, rotationY, updateJ6))
+        if (!solver.Solve(targetPos, rotationY))
         {
             Debug.LogError($"[IK失败] {stepName}");
             return;
         }
-
         for (int i = 0; i < 6; i++)
         {
-            // Step0 锁死 J1
-            if (i == 0 && lockJ1) continue;
-
-            // Step0 锁死 J6
-            if (i == 5 && !updateJ6) continue;
-
             if (i < robotController.joints.Length)
                 robotController.joints[i].targetAngle = solver.outAngles[i];
         }

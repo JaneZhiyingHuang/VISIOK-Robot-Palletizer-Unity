@@ -103,7 +103,7 @@ public class GeometricSolver : MonoBehaviour
     // ==============================================================================
     // 2. 主计算入口
     // ==============================================================================
-    public bool Solve(Vector3 targetPos, float placeRotationY = 0f, bool updateJ6 = true)
+    public bool Solve(Vector3 targetPos, float placeRotationY = 0f)
     {
         if (!isInitialized) return false;
 
@@ -122,12 +122,17 @@ public class GeometricSolver : MonoBehaviour
         outAngles[4] = -(outAngles[1] + outAngles[2]);
 
         // --- J6: 核心逻辑 (90 - J1) ---
-        if (updateJ6)
+        float j6CounterRotate = -(90f - outAngles[0]);
+
+        float axisOffset = 0f;
+        if (j6AxisMode == J6AlignMode.Align_World_Z)
         {
-            float j6CounterRotate = -(90f - outAngles[0]);
-            float axisOffset = (j6AxisMode == J6AlignMode.Align_World_Z) ? 90f : 0f;
-            outAngles[5] = j6CounterRotate + axisOffset + placeRotationY;
+            // 如果要对齐 Z 轴，需要再转 90 度
+            axisOffset = 90f;
         }
+
+        outAngles[5] = j6CounterRotate + axisOffset + placeRotationY;
+
         return true;
     }
 
@@ -158,7 +163,7 @@ public class GeometricSolver : MonoBehaviour
         float angleB = Mathf.Acos(cosB) * Mathf.Rad2Deg;
 
         float j2Angle = alpha + angleA;
-        float j3Angle = angleB; 
+        float j3Angle = angleB;
 
         return new float[] { j1Angle, j2Angle, j3Angle };
     }
