@@ -4,6 +4,17 @@ using TMPro;
 
 public class UIManager : MonoBehaviour
 {
+    // ==========================================
+    // 1. 定义状态枚举 
+    // ==========================================
+    public enum ProgramState
+    {
+        IDLE,       
+        WORKING,    
+        COMPLETED,   
+        PAUSED
+    }
+
     [Header("--- 脚本连接 ---")]
     public BoxFeeder boxFeeder;
     public PalletCalculator palletCalc;
@@ -25,14 +36,22 @@ public class UIManager : MonoBehaviour
     public TMP_Text txtMaxInfoDisplay;
     public TMP_Text txtSafeHeightDisplay;
 
-    [Header("--- 启动按钮 ---")]
+    [Header("--- STATE ---")]
     public Button btnStart;
+    public Button btnPause;
+    public Button butReset;
+    public TMP_Text txtStateDisplay;
 
-    [Header("--- 选中高亮颜色 ---")]
+    [Header("--- COLOR ---")]
     public Color normalColor = Color.white;
     public Color selectedColor = Color.cyan;
+    public Color colorIdle = Color.white;
+    public Color colorWorking = Color.green;
+    public Color colorCompleted = Color.yellow;
+    public Color colorPaused = Color.red;
 
     private bool hasStarted = false;
+    private bool isPaused = false;
 
     void Start()
     {
@@ -49,28 +68,122 @@ public class UIManager : MonoBehaviour
         if (btnLayerMinus) btnLayerMinus.onClick.AddListener(() => ChangeLayerCount(-1));
         if (btnLayerPlus) btnLayerPlus.onClick.AddListener(() => ChangeLayerCount(1));
 
+        // 4. state button
         if (btnStart != null) btnStart.onClick.AddListener(OnStartClicked);
+        if (btnPause != null) btnPause.onClick.AddListener(OnPauseClicked);
 
-        // 4. 默认选中 L 和 Default
+        
         OnBoxSelected("L");
         OnOrientationSelected(false);
+        UpdateState(ProgramState.IDLE);
     }
 
+
+    public void UpdateState(ProgramState newState)
+    {
+        if (txtStateDisplay == null) return;
+
+        switch (newState)
+        {
+            case ProgramState.IDLE:
+                txtStateDisplay.text = "IDLE";
+                txtStateDisplay.color = colorIdle;
+                break;
+
+            case ProgramState.WORKING:
+                txtStateDisplay.text = "WORKING";
+                txtStateDisplay.color = colorWorking;
+                break;
+
+            case ProgramState.COMPLETED:
+                txtStateDisplay.text = "COMPLETED";
+                txtStateDisplay.color = colorCompleted;
+                break;
+
+            case ProgramState.PAUSED: // 确保这里有 PAUSED
+                txtStateDisplay.text = "PAUSED";
+                txtStateDisplay.color = colorPaused;
+                break;
+        }
+    }
+    // ==========================================
+    // 【修改】Start 按钮逻辑 (兼顾启动和恢复)
+    // ==========================================
     void OnStartClicked()
     {
-        if (hasStarted) return;
+        // 情况 1: 如果是暂停状态，点击 Start 代表 "RESUME" (恢复)
+        if (hasStarted && isPaused)
+        {
+            PerformResume();
+            return;
+        }
+
+        // 情况 2: 如果还没开始，执行 "START" (启动)
+        if (!hasStarted)
+        {
+            PerformStart();
+        }
+    }
+
+    // 辅助：执行启动
+    void PerformStart()
+    {
         hasStarted = true;
+        isPaused = false;
+
+        // 启动后，Start 按钮变灰，直到暂停或结束
         btnStart.interactable = false;
+
+        UpdateState(ProgramState.WORKING);
 
         boxFeeder.StartSpawning();
         autoManager.BeginWork();
     }
+
+    // 辅助：执行恢复
+    void PerformResume()
+    {
+        isPaused = false;
+
+        // 恢复后，Start 按钮再次变灰
+        btnStart.interactable = false;
+
+        // 通知机械臂继续
+        if (autoManager != null) autoManager.SetPaused(false);
+
+        UpdateState(ProgramState.WORKING);
+    }
+
+    // ==========================================
+    // Pause 按钮逻辑 (只负责暂停)
+    // ==========================================
+    void OnPauseClicked()
+    {
+        // 1. 如果还没开始，或者已经结束，或者已经是暂停状态，就不处理
+        if (!hasStarted) return;
+        if (isPaused) return; // 如果已经暂停了，点暂停没反应（要点 Start 恢复）
+        if (txtStateDisplay.text == "COMPLETED") return;
+
+        // 2. 执行暂停
+        isPaused = true;
+
+        // 3. 通知 AutoManager
+        if (autoManager != null) autoManager.SetPaused(true);
+
+        // 4. 更新 UI 为 PAUSED
+        UpdateState(ProgramState.PAUSED);
+
+        // 5. 重新激活 Start 按钮，让用户可以点击它来恢复
+        btnStart.interactable = true;
+    }
+
 
     // ==========================================
     // 层数加减逻辑
     // ==========================================
     void ChangeLayerCount(int change)
     {
+        if (hasStarted && !isPaused) return;
         if (hasStarted) return;
 
         // 1. 获取当前最大允许层数
@@ -110,9 +223,6 @@ public class UIManager : MonoBehaviour
             txtSafeHeightDisplay.text = $"Safe Height: {heightInCm:F0} CM";
         }
     }
-
-
-
 
 
     // ==========================================
@@ -162,5 +272,14 @@ public class UIManager : MonoBehaviour
         colors.normalColor = isSelected ? selectedColor : normalColor;
         colors.selectedColor = isSelected ? selectedColor : normalColor;
         btn.colors = colors;
+    }
+
+    // ==========================================
+    // 让外部脚本通知任务完成
+    // ==========================================
+    public void NotifyJobFinished()
+    {
+        UpdateState(ProgramState.COMPLETED);
+        Debug.Log("🎉 任务完成！");
     }
 }

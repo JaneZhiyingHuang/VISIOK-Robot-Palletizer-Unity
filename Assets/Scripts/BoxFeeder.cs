@@ -85,9 +85,17 @@ public class BoxFeeder : MonoBehaviour
         Debug.Log($"[BoxFeeder] 容量已更新为: {totalCapacity}");
     }
 
+    public UIManager uiManager;
+
     public void TrySpawnNext()
     {
-        if (currentSpawnedCount >= totalCapacity) return;
+        // 如果箱子已经满了
+        if (currentSpawnedCount >= totalCapacity)
+        {
+            // 告诉 UIManager 任务完成了
+            if (uiManager != null) uiManager.NotifyJobFinished();
+            return;
+        }
         SpawnBox();
     }
 

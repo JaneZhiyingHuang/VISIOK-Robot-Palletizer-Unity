@@ -26,6 +26,8 @@ public class AutoManager : MonoBehaviour
     private float[] initialJointAngles;
     private Vector3 currentTargetPos;
 
+    private bool _isPaused = false;
+
     void Start()
     {
         RecordInitialAngles();
@@ -34,6 +36,13 @@ public class AutoManager : MonoBehaviour
     public void BeginWork()
     {
         StartCoroutine(StartDelayedJob());
+    }
+
+    public void SetPaused(bool paused)
+    {
+        _isPaused = paused;
+        if (_isPaused) Debug.Log("⏸️ 机械臂已暂停");
+        else Debug.Log("▶️ 机械臂继续运行");
     }
 
     // ========================================================
@@ -62,7 +71,7 @@ public class AutoManager : MonoBehaviour
     }
 
     // ========================================================
-    // 【修改】执行整个托盘的任务 (支持多层自动变角度)
+    // 【修改执行整个托盘的任务 (支持多层自动变角度)
     // ========================================================
     IEnumerator RunFullPalletJob()
     {
@@ -81,10 +90,19 @@ public class AutoManager : MonoBehaviour
 
         for (int i = 0; i < totalCount; i++)
         {
+            // ==============================
+            // 【核心暂停逻辑】卡在这里死循环，直到 _isPaused 变为 false
+            // ==============================
+            while (_isPaused)
+            {
+                yield return null; // 等待下一帧，什么都不做
+            }
+            // ==============================
+
             Debug.Log($"<color=orange>>> 处理第 {i + 1} / {totalCount} 个箱子 <<</color>");
             currentTargetPos = allPoints[i];
 
-            // 2. 【核心修改】动态计算当前这个箱子需要的旋转角度
+            // 2. 动态计算当前这个箱子需要的旋转角度
 
             // A. 算出当前箱子相对于托盘底部的相对高度
             float relativeY = currentTargetPos.y - palletBaseY;
@@ -111,6 +129,9 @@ public class AutoManager : MonoBehaviour
     // ========================================================
     IEnumerator RunSingleBoxSequence(Vector3 targetPos, float rotationY)
     {
+        // 【新增】进入流程前先检查一下暂停
+        while (_isPaused) yield return null;
+
         Vector3 pickPos = pickPoint.position;
         Vector3 pickHover = pickPos + Vector3.up * hoverHeight;
         Vector3 dropHover = targetPos + Vector3.up * hoverHeight;
@@ -118,13 +139,17 @@ public class AutoManager : MonoBehaviour
         // Step 1: Pick (抓取)
         Debug.Log($"步骤 1: 抓取");
         gripper.PickUp();
-        yield return new WaitForSeconds(0.5f);
+        // 【修改】换成带暂停的等待
+        yield return StartCoroutine(WaitForSecondsOrPause(0.5f));
 
         // Step 2: Lift (抬起)
         Debug.Log($"步骤 2: 抬起");
         MoveRobotTo(pickHover, 0f, "Step 2");
         // 等待抬起动作完成 (稍微多给一点时间确保完全离开底座)
-        yield return new WaitForSeconds(1f);
+        // 【修改】换成带暂停的等待
+        yield return StartCoroutine(WaitForSecondsOrPause(1f));
+
+        // 这一步只是打印 Log，不需要等待，所以这里不加暂停检查也可以
         LogCurrentJointAngles("抬起后状态");
 
         // ========================================================
@@ -144,27 +169,32 @@ public class AutoManager : MonoBehaviour
         // 注意：这里已经使用了传入的 rotationY
         Debug.Log($"步骤 3: 移动至托盘上方 (角度: {rotationY})");
         MoveRobotTo(dropHover, rotationY, "Step 3");
-        yield return new WaitForSeconds(1f);
+        // 【修改】换成带暂停的等待
+        yield return StartCoroutine(WaitForSecondsOrPause(1f));
 
         // Step 4: Down (下降)
         Debug.Log($"步骤 4: 下降");
         MoveRobotTo(targetPos, rotationY, "Step 4");
-        yield return new WaitForSeconds(0.5f);
+        // 【修改】换成带暂停的等待
+        yield return StartCoroutine(WaitForSecondsOrPause(0.5f));
         LogCurrentJointAngles("放置点状态");
 
         // Step 5: Release (放下)
         Debug.Log("步骤 5: 放下");
         gripper.Release();
-        yield return new WaitForSeconds(0.5f);
+        // 【修改】换成带暂停的等待
+        yield return StartCoroutine(WaitForSecondsOrPause(0.5f));
 
         // Step 6: Retract (撤回)
         MoveRobotTo(dropHover, rotationY, "Step 6");
-        yield return new WaitForSeconds(1f);
+        // 【修改】换成带暂停的等待
+        yield return StartCoroutine(WaitForSecondsOrPause(1f));
 
         // Step 7: 归位 (Return Home)
         Debug.Log("步骤 7: 归位");
         MoveRobotHome();
-        yield return new WaitForSeconds(2f);
+        // 【修改】换成带暂停的等待
+        yield return StartCoroutine(WaitForSecondsOrPause(2.0f));
         LogCurrentJointAngles("归位后状态");
     }
 
@@ -230,6 +260,26 @@ public class AutoManager : MonoBehaviour
         if (Mathf.Abs(axis.x) > 0.5f) return euler.x;
         if (Mathf.Abs(axis.y) > 0.5f) return euler.y;
         return euler.z;
+    }
+
+    // ========================================================
+    // 【新增】带暂停功能的等待协程
+    // ========================================================
+    IEnumerator WaitForSecondsOrPause(float duration)
+    {
+        float timer = 0f;
+        while (timer < duration)
+        {
+            // 如果暂停了，就卡死在这里，不再增加 timer
+            while (_isPaused)
+            {
+                yield return null; // 等待下一帧
+            }
+
+            // 没暂停，计时器才走
+            timer += Time.deltaTime;
+            yield return null;
+        }
     }
 
     // ========================================================
