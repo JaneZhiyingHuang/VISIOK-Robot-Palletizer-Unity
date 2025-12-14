@@ -17,7 +17,7 @@ public class AutoManager : MonoBehaviour
 
     [Header("参数调试")]
     public float hoverHeight = 0.4f;
-    public float boxPlaceAngle = 0f;
+    //public float boxPlaceAngle = 0f;
 
     [Header("启动设置")]
     [Tooltip("游戏开始后，等待几秒再开始第一次抓取？(给第一个箱子留出生成和移动的时间)")]

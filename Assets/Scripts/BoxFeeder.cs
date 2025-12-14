@@ -27,13 +27,14 @@ public class BoxFeeder : MonoBehaviour
     [SerializeField] private int totalCapacity = 0;
     [SerializeField] private int currentSpawnedCount = 0;
 
+    public UIManager uiManager;
+
     void Start()
     {
         if (spawnPoint == null || palletCalculator == null) return;
         if (pickupPointReference == null) pickupPointReference = spawnPoint;
 
-        // 默认选中 L (或者你在 Inspector 里手动指定的逻辑)
-        // 注意：这里最好也调用一次 SwitchBoxType 来确保 Pallet 数据同步
+        // 默认选中 L
         SwitchBoxType("L");
     }
 
@@ -42,9 +43,7 @@ public class BoxFeeder : MonoBehaviour
         SpawnBox();
     }
 
-    // ========================================================
-    // 供 UI 调用的切换方法 (修改版)
-    // ========================================================
+
     public void SwitchBoxType(string type)
     {
         // 1. 切换 Prefab
@@ -56,24 +55,16 @@ public class BoxFeeder : MonoBehaviour
 
         Debug.Log($"[BoxFeeder] 切换箱型为: {type}");
 
-        // ========================================================
-        // 【核心修改】直接利用 PalletCalculator 现有的逻辑
-        // ========================================================
-
         // A. 把当前的 Prefab 赋值给 Pallet 的 boxReference
-        // (PalletCalculator 原本是拖场景物体的，但拖 Prefab transform 也可以读到 Collider/Renderer)
         palletCalculator.boxReference = _activePrefab.transform;
 
         // B. 调用 Pallet 现有的自动读取函数
-        // 这就像你在 Inspector 上点了一下 "Auto Detect"
         palletCalculator.AutoDetectBoxSize();
-
-        // ========================================================
 
         // 2. 重置计数
         currentSpawnedCount = 0;
 
-        // 3. 刷新容量 (此时 Pallet 里的 rawDimensions 已经是新的了)
+        // 3. 刷新容量
         RefreshCapacity();
     }
 
@@ -84,8 +75,6 @@ public class BoxFeeder : MonoBehaviour
         totalCapacity = points.Count;
         Debug.Log($"[BoxFeeder] 容量已更新为: {totalCapacity}");
     }
-
-    public UIManager uiManager;
 
     public void TrySpawnNext()
     {
@@ -110,6 +99,7 @@ public class BoxFeeder : MonoBehaviour
 
         GameObject newBox = Instantiate(_activePrefab, initialPos, finalRot);
         newBox.name = $"Box_{currentSpawnedCount + 1}";
+
 
         // 2. 获取 BoxMover 脚本
         var boxScript = newBox.GetComponent<BoxMover>();
