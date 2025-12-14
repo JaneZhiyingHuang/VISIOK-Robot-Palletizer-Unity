@@ -7,43 +7,43 @@ using UnityEditor;
 public class GeometricSolver : MonoBehaviour
 {
     // ==========================================
-    // 定义 J6 对齐模式
+    // Define J6 Alignment Mode
     // ==========================================
     public enum J6AlignMode
     {
-        [InspectorName("保持平行于世界 X 轴 (红轴)")] Align_World_X,
-        [InspectorName("保持平行于世界 Z 轴 (蓝轴)")] Align_World_Z
+        [InspectorName("Keep Parallel to World X (Red Axis)")] Align_World_X,
+        [InspectorName("Keep Parallel to World Z (Blue Axis)")] Align_World_Z
     }
 
-    [Header("调试与预览")]
+    [Header("Debug & Preview")]
     public Transform previewTarget;
     public bool showGizmos = true;
 
-    [Header("核心引用")]
+    [Header("Core References")]
     public Transform robotStaticBase;
     public Transform j1Base;
     public Transform j2Shoulder;
     public Transform j3Elbow;
     public Transform j5Wrist;
-    [Tooltip("请把 J6 (旋转手腕/法兰) 的物体拖到这里")]
+    [Tooltip("Drag J6 (Rotating Wrist/Flange) object here")]
     public Transform j6Hand;
     public Transform gripperTip;
 
-    [Header("J6 (吸盘) 自动对齐配置")]
+    [Header("J6 (Suction Cup) Auto-Align Config")]
     public J6AlignMode j6AxisMode = J6AlignMode.Align_World_X;
 
-    [Header("计算结果 (增量)")]
+    [Header("Calculation Results (Delta)")]
     public float[] outAngles = new float[6];
 
-    // --- 内部变量 ---
+    // --- Internal Variables ---
     private float L1, L2, L_Hand;
 
-    // 记录初始时刻的“数学理论角度”
+    // Record 'Mathematical Theoretical Angles' at initialization
     [SerializeField, HideInInspector] private float mathJ1_Init;
     [SerializeField, HideInInspector] private float mathJ2_Init;
     [SerializeField, HideInInspector] private float mathJ3_Init;
 
-    // 可视化用的向量
+    // Vectors for Visualization
     private Vector3 visInitJ1Dir;
     private Vector3 visInitJ2Dir;
     private Vector3 visInitJ3Dir;
@@ -60,7 +60,7 @@ public class GeometricSolver : MonoBehaviour
         if (previewTarget != null) Solve(previewTarget.position, 0f);
     }
 
-    [ContextMenu("初始化臂长")]
+    [ContextMenu("Initialize Arm Lengths")]
     public void InitializeLengths()
     {
         if (j2Shoulder && j3Elbow && j5Wrist && gripperTip)
@@ -72,24 +72,24 @@ public class GeometricSolver : MonoBehaviour
     }
 
     // ==============================================================================
-    // 1. 记录零位
+    // 1. Record Zero Pose
     // ==============================================================================
-    [ContextMenu("重置零位 (Record Zero)")]
+    [ContextMenu("Reset Zero Pose (Record Zero)")]
     public void RecordZeroPose()
     {
         if (!j2Shoulder || !gripperTip) return;
         InitializeLengths();
 
-        // 记录向量用于画图
+        // Record vectors for drawing gizmos
         Vector3 dirToTip = gripperTip.position - j1Base.position;
         visInitJ1Dir = Vector3.ProjectOnPlane(dirToTip, Vector3.up).normalized;
         visInitJ2Dir = (j3Elbow.position - j2Shoulder.position).normalized;
         visInitJ3Dir = (j5Wrist.position - j3Elbow.position).normalized;
 
-        // J6 画图初始方向 (红轴或蓝轴)
+        // J6 Gizmo initial direction (Red or Blue axis)
         visInitJ6Dir = (j6AxisMode == J6AlignMode.Align_World_X) ? Vector3.right : Vector3.forward;
 
-        // 记录 J1/J2/J3 的初始数学值
+        // Record initial math values for J1/J2/J3
         float[] initAngles = CalculateMathAngles(gripperTip.position);
         if (initAngles != null)
         {
@@ -101,7 +101,7 @@ public class GeometricSolver : MonoBehaviour
     }
 
     // ==============================================================================
-    // 2. 主计算入口
+    // 2. Main Calculation Entry Point
     // ==============================================================================
     public bool Solve(Vector3 targetPos, float placeRotationY = 0f)
     {
@@ -110,7 +110,7 @@ public class GeometricSolver : MonoBehaviour
         float[] targetAngles = CalculateMathAngles(targetPos);
         if (targetAngles == null) return false;
 
-        // --- J1, J2, J3 (Delta 逻辑) ---
+        // --- J1, J2, J3 (Delta Logic) ---
         outAngles[0] = (targetAngles[0] - mathJ1_Init);
         outAngles[1] = (targetAngles[1] - mathJ2_Init);
         outAngles[2] = (targetAngles[2] - mathJ3_Init);
@@ -118,16 +118,16 @@ public class GeometricSolver : MonoBehaviour
         // --- J4 ---
         outAngles[3] = 0f;
 
-        // --- J5: 抵消 J2 + J3 (垂直平衡) ---
+        // --- J5: Counteract J2 + J3 (Vertical Balance) ---
         outAngles[4] = -(outAngles[1] + outAngles[2]);
 
-        // --- J6: 核心逻辑 (90 - J1) ---
+        // --- J6: Core Logic (90 - J1) ---
         float j6CounterRotate = -(90f - outAngles[0]);
 
         float axisOffset = 0f;
         if (j6AxisMode == J6AlignMode.Align_World_Z)
         {
-            // 如果要对齐 Z 轴，需要再转 90 度
+            // If aligning to Z axis, rotate another 90 degrees
             axisOffset = 90f;
         }
 
@@ -137,7 +137,7 @@ public class GeometricSolver : MonoBehaviour
     }
 
     // ==============================================================================
-    // 3. 纯数学解算
+    // 3. Pure Math Solver
     // ==============================================================================
     private float[] CalculateMathAngles(Vector3 targetPos)
     {

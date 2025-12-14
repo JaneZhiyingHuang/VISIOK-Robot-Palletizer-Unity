@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// [ExecuteAlways] 允许脚本在不运行游戏时也能执行 Update
+// [ExecuteAlways] Allows the script to execute Update even when the game is not running
 [ExecuteAlways]
 public class PhysicsRobotController : MonoBehaviour
 {
@@ -10,44 +10,44 @@ public class PhysicsRobotController : MonoBehaviour
         // public string name;
         public HingeJoint joint;
 
-        [Header("初始姿态 (不要手动改，右键脚本保存)")]
-        public Vector3 initialEuler; // 记录关节原本的旋转值
+        [Header("Initial Pose (Do not edit manually, right-click script to save)")]
+        public Vector3 initialEuler; // Records the original rotation value of the joint
 
-        [Header("控制面板")]
+        [Header("Control Panel")]
         [Range(-180, 180)]
-        public float startAngle = 0f; // 开机时自动转到的角度
+        public float startAngle = 0f; // The angle to rotate to automatically on startup
 
         [Range(-180, 180)]
-        public float targetAngle = 0f; // 实时控制的角度
+        public float targetAngle = 0f; // Real-time control angle
     }
 
     public JointControl[] joints;
     public GripperController gripper;
 
     // ---------------------------------------------------------
-    // 右键脚本 -> 选择 "Record Zero Pose"
-    // 必须先做这一步，告诉脚本“什么样子才算 0 度”
+    // Right-click script -> Select "Record Zero Pose"
+    // Must do this step first to tell the script "what looks like 0 degrees"
     // ---------------------------------------------------------
-    [ContextMenu("1. 记录当前姿态为零位 (Record Zero Pose)")]
+    [ContextMenu("1. Record Zero Pose")]
     public void RecordZeroPose()
     {
         foreach (var j in joints)
         {
             if (j.joint != null)
             {
-                // 把现在的旋转记录下来，作为“基准”
+                // Record current rotation as the "baseline"
                 j.initialEuler = j.joint.transform.localEulerAngles;
-                j.targetAngle = 0f; 
+                j.targetAngle = 0f;
                 j.startAngle = 0f;
             }
         }
-        Debug.Log("✅ 已记录零位！现在拖动滑块是基于这个姿态旋转。");
+        Debug.Log("✅ Zero pose recorded! Now sliding the slider rotates based on this pose.");
     }
 
     // ---------------------------------------------------------
-    // 还原功能：如果拖乱了，点这个回到零位
+    // Reset function: If messed up, click this to return to zero pose
     // ---------------------------------------------------------
-    [ContextMenu("2. 还原到零位 (Reset to Zero)")]
+    [ContextMenu("2. Reset to Zero")]
     public void ResetToZero()
     {
         foreach (var j in joints)
@@ -67,9 +67,9 @@ public class PhysicsRobotController : MonoBehaviour
             foreach (var j in joints)
             {
                 if (j.joint == null) continue;
-                // 游戏开始，应用 StartAngle，forceSnap=true 表示强制归位
+                // Game starts, apply StartAngle, forceSnap=true means forced positioning
                 ApplyPhysics(j, j.startAngle, true);
-                j.targetAngle = j.startAngle; // 同步UI
+                j.targetAngle = j.startAngle; // Sync UI
             }
         }
     }
@@ -88,7 +88,7 @@ public class PhysicsRobotController : MonoBehaviour
     void Update()
     {
         // ==================================================
-        // 1. 编辑模式逻辑 (预览)
+        // 1. Edit Mode Logic (Preview)
         // ==================================================
         if (!Application.isPlaying)
         {
@@ -96,44 +96,44 @@ public class PhysicsRobotController : MonoBehaviour
             {
                 if (j.joint != null)
                 {
-                    // 1. 获取初始基准旋转
+                    // 1. Get initial baseline rotation
                     Quaternion zeroRot = Quaternion.Euler(j.initialEuler);
 
-                    // 2. 获取旋转轴 (防止轴是0导致不动)
+                    // 2. Get rotation axis (Prevent axis from being 0 causing no movement)
                     Vector3 axis = j.joint.axis.normalized;
-                    if (axis == Vector3.zero) axis = Vector3.right; // 默认给个X轴防止报错
+                    if (axis == Vector3.zero) axis = Vector3.right; // Default to X axis to prevent errors
 
-                    // 3. 计算增量旋转
+                    // 3. Calculate incremental rotation
                     Quaternion moveRot = Quaternion.AngleAxis(j.targetAngle, axis);
 
-                    // 4. 混合在一起 (基准 * 增量)
+                    // 4. Blend together (Baseline * Increment)
                     j.joint.transform.localRotation = zeroRot * moveRot;
 
-                    j.startAngle = j.targetAngle; // 同步保存
+                    j.startAngle = j.targetAngle; // Sync save
                 }
             }
         }
 
         // ==================================================
-        // 2. 运行模式逻辑 (按键)
+        // 2. Play Mode Logic (Keys)
         // ==================================================
         if (Application.isPlaying && gripper != null)
         {
             if (Input.GetKeyDown(KeyCode.G))
             {
-                Debug.Log("指令：抓取");
+                Debug.Log("Command: Pick Up");
                 gripper.PickUp();
             }
             if (Input.GetKeyDown(KeyCode.R))
             {
-                Debug.Log("指令：释放");
+                Debug.Log("Command: Release");
                 gripper.Release();
             }
         }
     }
 
     // ========================================================
-    // 智能最短路径应用 + 速度限制
+    // Intelligent Shortest Path Application + Speed Limit
     // ========================================================
     void ApplyPhysics(JointControl j, float targetAngle, bool forceSnap)
     {
@@ -149,14 +149,14 @@ public class PhysicsRobotController : MonoBehaviour
         {
             float currentSpringTarget = spring.targetPosition;
 
-            // 1. 计算 "最短路径" 差值 (-180 到 180)
+            // 1. Calculate "Shortest Path" difference (-180 to 180)
             float delta = Mathf.DeltaAngle(currentSpringTarget, targetAngle);
 
-            // 2. 速度限制 (防止暴冲)
+            // 2. Speed limit (Prevent violent rushing)
             float maxStep = 10f;
             delta = Mathf.Clamp(delta, -maxStep, maxStep);
 
-            // 3. 在旧值的基础上累加差值
+            // 3. Accumulate difference on top of old value
             spring.targetPosition = currentSpringTarget + delta;
         }
 
@@ -170,13 +170,13 @@ public class PhysicsRobotController : MonoBehaviour
         {
             if (j.joint != null)
             {
-                // 1. 画出关节的位置 (蓝球)
+                // 1. Draw joint position (Blue sphere)
                 Gizmos.color = Color.blue;
                 Gizmos.DrawSphere(j.joint.transform.position, 0.05f);
 
-                // 2. 画出关节的旋转轴 (超长黄线) —— 这就是它旋转所围绕的那根“刺”
+                // 2. Draw joint rotation axis (Long yellow line) -- This is the "pivot" it rotates around
                 Gizmos.color = Color.yellow;
-                // 获取关节在世界空间下的轴向
+                // Get axis in world space
                 Vector3 worldAxis = j.joint.transform.TransformDirection(j.joint.axis);
                 Gizmos.DrawRay(j.joint.transform.position, worldAxis * 2f);
             }

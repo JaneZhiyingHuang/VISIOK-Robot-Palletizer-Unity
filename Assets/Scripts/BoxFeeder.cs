@@ -4,25 +4,25 @@ using System.Collections.Generic;
 
 public class BoxFeeder : MonoBehaviour
 {
-    [Header("多尺寸预制体设置")]
+    [Header("Multi-size Prefab Settings")]
     public GameObject prefabL;
     public GameObject prefabM;
     public GameObject prefabS;
 
     private GameObject _activePrefab;
 
-    [Header("核心引用")]
+    [Header("Core References")]
     public Transform spawnPoint;
     public PalletCalculator palletCalculator;
 
-    [Header("场景引用自动修复")]
+    [Header("Scene Reference Auto-Fix")]
     public Transform pickupPointReference;
 
-    [Header("位置与旋转修正")]
+    [Header("Position and Rotation Correction")]
     public Vector3 spawnRotationEuler = Vector3.zero;
     public Vector3 positionOffset = Vector3.zero;
 
-    [Header("状态 (只读)")]
+    [Header("Status (Read Only)")]
     [SerializeField] private int totalCapacity = 0;
     [SerializeField] private int currentSpawnedCount = 0;
 
@@ -44,42 +44,42 @@ public class BoxFeeder : MonoBehaviour
 
     public void SwitchBoxType(string type)
     {
-        // 1. 切换 Prefab
+        // 1. Switch Prefab
         if (type == "L") _activePrefab = prefabL;
         else if (type == "M") _activePrefab = prefabM;
         else if (type == "S") _activePrefab = prefabS;
 
         if (_activePrefab == null) return;
 
-        Debug.Log($"[BoxFeeder] 切换箱型为: {type}");
+        Debug.Log($"[BoxFeeder] Switched Box Type to: {type}");
 
-        // A. 把当前的 Prefab 赋值给 Pallet 的 boxReference
+        // A. Assign current Prefab to Pallet's boxReference
         palletCalculator.boxReference = _activePrefab.transform;
 
-        // B. 调用 Pallet 现有的自动读取函数
+        // B. Call Pallet's existing auto-detect function
         palletCalculator.AutoDetectBoxSize();
 
-        // 2. 重置计数
+        // 2. Reset counter
         currentSpawnedCount = 0;
 
-        // 3. 刷新容量
+        // 3. Refresh capacity
         RefreshCapacity();
     }
 
     public void RefreshCapacity()
     {
-        // Pallet 重新计算点位
+        // Pallet recalculates points
         List<Vector3> points = palletCalculator.CalculateAllPoints();
         totalCapacity = points.Count;
-        Debug.Log($"[BoxFeeder] 容量已更新为: {totalCapacity}");
+        Debug.Log($"[BoxFeeder] Capacity updated to: {totalCapacity}");
     }
 
     public void TrySpawnNext()
     {
-        // 如果箱子已经满了
+        // If boxes are full
         if (currentSpawnedCount >= totalCapacity)
         {
-            // 告诉 UIManager 任务完成了
+            // Tell UIManager the job is finished
             if (uiManager != null) uiManager.NotifyJobFinished();
             return;
         }
@@ -91,7 +91,7 @@ public class BoxFeeder : MonoBehaviour
         if (_activePrefab == null) return;
         if (currentSpawnedCount >= totalCapacity) return;
 
-        // 1. 初始生成
+        // 1. Initial Spawn
         Vector3 initialPos = spawnPoint.position + positionOffset;
         Quaternion finalRot = Quaternion.Euler(spawnRotationEuler);
 
@@ -99,14 +99,14 @@ public class BoxFeeder : MonoBehaviour
         newBox.name = $"Box_{currentSpawnedCount + 1}";
 
 
-        // 2. 获取 BoxMover 脚本
+        // 2. Get BoxMover script
         var boxScript = newBox.GetComponent<BoxMover>();
 
         if (boxScript != null)
         {
             boxScript.targetPoint = this.pickupPointReference;
 
-            // 位置修正逻辑
+            // Position correction logic
             if (boxScript.boxCenterReference == null)
             {
                 Transform foundCenter = newBox.transform.Find("Box_Center");

@@ -13,14 +13,14 @@ public class GripperController : MonoBehaviour
         {
             attachedBox = boxInRange;
 
-            // 1. 关闭物理
+            // 1. Disable physics
             Rigidbody rb = attachedBox.GetComponent<Rigidbody>();
             if (rb != null) rb.isKinematic = true;
 
-            // 2. 建立父子关系，但保持“世界变换”不变！
+            // 2. Set parent-child relationship, but keep "world transform" unchanged!
             attachedBox.SetParent(this.transform, true);
 
-            Debug.Log("抓到了: " + attachedBox.name);
+            Debug.Log("Picked up: " + attachedBox.name);
         }
     }
 
@@ -28,14 +28,14 @@ public class GripperController : MonoBehaviour
     {
         if (attachedBox != null)
         {
-            // 1. 解除父子关系 (放回世界/场景中)
+            // 1. Detach parent-child relationship (Put back into world/scene)
             attachedBox.SetParent(null);
 
-            // 2. 恢复物理模拟
+            // 2. Restore physics simulation
             Rigidbody rb = attachedBox.GetComponent<Rigidbody>();
             if (rb != null) rb.isKinematic = false;
 
-            Debug.Log("放下了: " + attachedBox.name);
+            Debug.Log("Released: " + attachedBox.name);
             attachedBox = null;
         }
     }

@@ -4,22 +4,22 @@ using System.Collections.Generic;
 
 public class AutoManager : MonoBehaviour
 {
-    [Header("脚本引用")]
+    [Header("Script References")]
     public PhysicsRobotController robotController;
     public GripperController gripper;
     public GeometricSolver solver;
     public PalletCalculator palletCalc;
     public BoxFeeder boxFeeder;
 
-    [Header("关键物体")]
+    [Header("Key Objects")]
     public Transform pickPoint;
     public Transform j1Base;
 
-    [Header("参数调试")]
+    [Header("Debug Parameters")]
     public float hoverHeight = 0.4f;
 
-    [Header("启动设置")]
-    [Tooltip("游戏开始后，等待几秒再开始第一次抓取？(给第一个箱子留出生成和移动的时间)")]
+    [Header("Startup Settings")]
+    [Tooltip("How many seconds to wait after game start before the first grab? (To allow time for the first box to spawn and move)")]
     public float startDelay = 5.0f;
 
     private float[] initialJointAngles;
@@ -40,20 +40,20 @@ public class AutoManager : MonoBehaviour
     public void SetPaused(bool paused)
     {
         _isPaused = paused;
-        if (_isPaused) Debug.Log("⏸️ 机械臂已暂停");
-        else Debug.Log("▶️ 机械臂继续运行");
+        if (_isPaused) Debug.Log("⏸️ Robot Arm Paused");
+        else Debug.Log("▶️ Robot Arm Resumed");
     }
 
     // ========================================================
-    // 延迟启动协程
+    // Delayed Start Coroutine
     // ========================================================
     IEnumerator StartDelayedJob()
     {
-        Debug.Log($"⏳ [系统预热] 正在等待 {startDelay} 秒，让第1个箱子就位...");
+        Debug.Log($"⏳ [System Warmup] Waiting {startDelay} seconds for the 1st box to be in position...");
 
         yield return new WaitForSeconds(startDelay);
 
-        Debug.Log("🔥 [系统启动] 开始执行抓取任务！");
+        Debug.Log("🔥 [System Start] Starting picking job!");
         StartCoroutine(RunFullPalletJob());
     }
 
@@ -70,129 +70,129 @@ public class AutoManager : MonoBehaviour
     }
 
     // ========================================================
-    // 执行整个托盘的任务 (支持多层自动变角度)
+    // Execute the full pallet job (Supports multi-layer automatic angle adjustment)
     // ========================================================
     IEnumerator RunFullPalletJob()
     {
-        // 1. 获取所有层、所有箱子的坐标列表
+        // 1. Get coordinate list for all layers and all boxes
         List<Vector3> allPoints = palletCalc.CalculateAllPoints();
         int totalCount = allPoints.Count;
 
-        Debug.Log($"托盘规划了 {totalCount} 个箱子位。");
+        Debug.Log($"Pallet planned {totalCount} box positions.");
 
-        // 我们需要知道每个箱子的高度，以便反算它属于第几层
+        // We need box height to calculate which layer it belongs to
         float singleBoxHeight = palletCalc.rawDimensions.y;
 
-        // 托盘底部的 Y 坐标 (世界坐标)
+        // Pallet Base Y (World Coordinate)
         float palletBaseY = palletCalc.palletStartCorner.position.y;
 
         for (int i = 0; i < totalCount; i++)
         {
             // ==============================
-            // 【核心暂停逻辑】卡在这里死循环，直到 _isPaused 变为 false
+            // [Core Pause Logic] Loop here until _isPaused is false
             // ==============================
             while (_isPaused)
             {
-                yield return null; // 等待下一帧，什么都不做
+                yield return null; // Wait next frame, do nothing
             }
             // ==============================
 
-            Debug.Log($"<color=orange>>> 处理第 {i + 1} / {totalCount} 个箱子 <<</color>");
+            Debug.Log($"<color=orange>>> Processing Box {i + 1} / {totalCount} <<</color>");
             currentTargetPos = allPoints[i];
 
-            // 2. 动态计算当前这个箱子需要的旋转角度
+            // 2. Dynamically calculate required rotation angle for current box
 
-            // A. 算出当前箱子相对于托盘底部的相对高度
+            // A. Calculate relative height from base
             float relativeY = currentTargetPos.y - palletBaseY;
 
-            // B. 算出这是第几层 (0, 1, 2...)
-            // 比如相对高度 0.14(半高) -> 0.14/0.28 = 0.5 -> floor = 0层
-            // 比如相对高度 0.42(一层半) -> 0.42/0.28 = 1.5 -> floor = 1层
+            // B. Calculate Layer Index (0, 1, 2...)
+            // E.g. relative 0.14 (half) -> 0.14/0.28 = 0.5 -> floor = Layer 0
+            // E.g. relative 0.42 (1.5 height) -> 0.42/0.28 = 1.5 -> floor = Layer 1
             int currentLayerIndex = Mathf.FloorToInt(relativeY / singleBoxHeight);
 
-            // C. 问 PalletCalculator 这一层应该转多少度
+            // C. Ask PalletCalculator for rotation degrees
             float dynamicAngle = palletCalc.GetRotationForLayer(currentLayerIndex);
 
-            // 3. 把算出来的 dynamicAngle 传给单次任务
+            // 3. Pass dynamicAngle to single task
             yield return StartCoroutine(RunSingleBoxSequence(currentTargetPos, dynamicAngle));
 
             yield return new WaitForSeconds(0.5f);
         }
 
-        Debug.Log("<color=cyan>=== 任务结束 ===</color>");
+        Debug.Log("<color=cyan>=== Job Finished ===</color>");
     }
 
     // ========================================================
-    // 单次流程：接收目标位置作为参数
+    // Single Sequence: Receive target position as parameter
     // ========================================================
     IEnumerator RunSingleBoxSequence(Vector3 targetPos, float rotationY)
     {
-        //进入流程前先检查一下暂停
+        // Check pause before entering sequence
         while (_isPaused) yield return null;
 
         Vector3 pickPos = pickPoint.position;
         Vector3 pickHover = pickPos + Vector3.up * hoverHeight;
         Vector3 dropHover = targetPos + Vector3.up * hoverHeight;
 
-        // Step 1: Pick (抓取)
-        Debug.Log($"步骤 1: 抓取");
+        // Step 1: Pick
+        Debug.Log($"Step 1: Pick");
         gripper.PickUp();
         yield return StartCoroutine(WaitForSecondsOrPause(0.5f));
 
-        // Step 2: Lift (抬起)
-        Debug.Log($"步骤 2: 抬起");
+        // Step 2: Lift
+        Debug.Log($"Step 2: Lift");
         MoveRobotTo(pickHover, 0f, "Step 2");
         yield return StartCoroutine(WaitForSecondsOrPause(1f));
-        //LogCurrentJointAngles("抬起后状态");
+        //LogCurrentJointAngles("Status after Lift");
 
         // ========================================================
-        // 通知 Feeder 补货
+        // Notify Feeder to restock
         // ========================================================
         if (boxFeeder != null)
         {
-            //Debug.Log("🔔 [AutoManager] 通知生成下一个箱子...");
+            //Debug.Log("🔔 [AutoManager] Notify spawn next box...");
             boxFeeder.TrySpawnNext();
         }
         else
         {
-            Debug.LogWarning("⚠️ 未绑定 BoxFeeder，无法自动补货！");
+            Debug.LogWarning("⚠️ BoxFeeder not assigned, cannot auto-restock!");
         }
 
-        // Step 3: Fly (移动到托盘上方)
-        Debug.Log($"步骤 3: 移动至托盘上方 (角度: {rotationY})");
+        // Step 3: Fly (Move to pallet)
+        Debug.Log($"Step 3: Move to pallet (Angle: {rotationY})");
         MoveRobotTo(dropHover, rotationY, "Step 3");
         yield return StartCoroutine(WaitForSecondsOrPause(1f));
 
-        // Step 4: Down (下降)
-        Debug.Log($"步骤 4: 下降");
+        // Step 4: Down
+        Debug.Log($"Step 4: Down");
         MoveRobotTo(targetPos, rotationY, "Step 4");
         yield return StartCoroutine(WaitForSecondsOrPause(0.5f));
-        //LogCurrentJointAngles("放置点状态");
+        //LogCurrentJointAngles("Status at Place Point");
 
-        // Step 5: Release (放下)
-        Debug.Log("步骤 5: 放下");
+        // Step 5: Release
+        Debug.Log("Step 5: Release");
         gripper.Release();
         yield return StartCoroutine(WaitForSecondsOrPause(0.5f));
 
-        // Step 6: Retract (撤回)
+        // Step 6: Retract
         MoveRobotTo(dropHover, rotationY, "Step 6");
         yield return StartCoroutine(WaitForSecondsOrPause(1f));
 
-        // Step 7: 归位 (Return Home)
-        Debug.Log("步骤 7: 归位");
+        // Step 7: Return Home
+        Debug.Log("Step 7: Return Home");
         MoveRobotHome();
         yield return StartCoroutine(WaitForSecondsOrPause(2.0f));
-        //LogCurrentJointAngles("归位后状态");
+        //LogCurrentJointAngles("Status at Home");
     }
 
     // --------------------------------------------------------
-    // IK 与 移动逻辑 
+    // IK and Movement Logic
     // --------------------------------------------------------
     void MoveRobotTo(Vector3 targetPos, float rotationY, string stepName)
     {
         if (!solver.Solve(targetPos, rotationY))
         {
-            Debug.LogError($"[IK失败] {stepName}");
+            Debug.LogError($"[IK Failed] {stepName}");
             return;
         }
         for (int i = 0; i < 6; i++)
@@ -211,7 +211,7 @@ public class AutoManager : MonoBehaviour
     }
 
     // --------------------------------------------------------
-    // Log 辅助 
+    // Log Helpers
     // --------------------------------------------------------
     void LogCurrentJointAngles(string context)
     {
@@ -219,7 +219,7 @@ public class AutoManager : MonoBehaviour
 
         if (solver != null && solver.gripperTip != null)
         {
-            Debug.Log($"<color=green>【末端坐标】World: {solver.gripperTip.position.ToString("F4")}</color>");
+            Debug.Log($"<color=green>[End Effector] World: {solver.gripperTip.position.ToString("F4")}</color>");
         }
 
         for (int i = 0; i < robotController.joints.Length; i++)
@@ -236,7 +236,7 @@ public class AutoManager : MonoBehaviour
             float error = Mathf.Abs(actualRelative - target);
 
             string color = error > 5f ? "red" : "white";
-            Debug.Log($"<color={color}>J{i + 1}: 目标={target:F1}° / 实际={actualRelative:F1}° (误差:{error:F1})</color>");
+            Debug.Log($"<color={color}>J{i + 1}: Target={target:F1}° / Actual={actualRelative:F1}° (Error:{error:F1})</color>");
         }
     }
 
@@ -250,53 +250,53 @@ public class AutoManager : MonoBehaviour
     }
 
     // ========================================================
-    // 带暂停功能的等待协程
+    // Wait Coroutine with Pause
     // ========================================================
     IEnumerator WaitForSecondsOrPause(float duration)
     {
         float timer = 0f;
         while (timer < duration)
         {
-            // 如果暂停了，就卡死在这里，不再增加 timer
+            // If paused, stuck here, stop timer
             while (_isPaused)
             {
-                yield return null; // 等待下一帧
+                yield return null; // Wait next frame
             }
 
-            // 没暂停，计时器才走
+            // Not paused, timer runs
             timer += Time.deltaTime;
             yield return null;
         }
     }
 
     // ========================================================
-    // Gizmos (显示当前动态目标)
+    // Gizmos (Show current dynamic target)
     // ========================================================
     void OnDrawGizmos()
     {
         if (pickPoint == null) return;
 
-        // 抓取点
+        // Pick Point
         Gizmos.color = Color.green;
         Gizmos.DrawSphere(pickPoint.position, 0.05f);
 
-        // 抓取悬停点
+        // Pick Hover Point
         Vector3 pickH = pickPoint.position + Vector3.up * hoverHeight;
         Gizmos.color = Color.yellow;
         Gizmos.DrawLine(pickPoint.position, pickH);
 
-        // 动态显示当前要去的目标点
+        // Dynamically show target point
         if (Application.isPlaying && currentTargetPos != Vector3.zero)
         {
             Gizmos.color = Color.red;
             Gizmos.DrawSphere(currentTargetPos, 0.05f);
 
             Vector3 dropH = currentTargetPos + Vector3.up * hoverHeight;
-            Gizmos.color = new Color(1, 0.5f, 0); // 橙色
+            Gizmos.color = new Color(1, 0.5f, 0); // Orange
             Gizmos.DrawSphere(dropH, 0.05f);
             Gizmos.DrawLine(dropH, currentTargetPos);
 
-            // 画一条线示意飞行轨迹
+            // Draw flight path line
             Gizmos.color = Color.white;
             Gizmos.DrawLine(pickH, dropH);
         }

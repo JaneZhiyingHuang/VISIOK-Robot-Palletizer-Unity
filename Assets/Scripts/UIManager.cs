@@ -2,12 +2,12 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
-using System.Collections.Generic; 
+using System.Collections.Generic;
 
 public class UIManager : MonoBehaviour
 {
     // ==========================================
-    // 1. 定义状态枚举 
+    // 1. Define State Enum 
     // ==========================================
     public enum ProgramState
     {
@@ -17,21 +17,21 @@ public class UIManager : MonoBehaviour
         PAUSED
     }
 
-    [Header("--- 脚本连接 ---")]
+    [Header("--- Script Connections ---")]
     public BoxFeeder boxFeeder;
     public PalletCalculator palletCalc;
     public AutoManager autoManager;
 
-    [Header("--- 箱子尺寸按钮 ---")]
+    [Header("--- Box Size Buttons ---")]
     public Button btnL;
     public Button btnM;
     public Button btnS;
 
-    [Header("--- 方向按钮 ---")]
+    [Header("--- Orientation Buttons ---")]
     public Button btnDefault;
     public Button btnRotate;
 
-    [Header("--- 层数控制 ---")]
+    [Header("--- Layer Control ---")]
     public Button btnLayerMinus;
     public Button btnLayerPlus;
     public TMP_Text txtLayerDisplay;
@@ -41,10 +41,10 @@ public class UIManager : MonoBehaviour
     [Header("--- STATE ---")]
     public Button btnStart;
     public Button btnPause;
-    public Button btnRestart; 
+    public Button btnRestart;
     public TMP_Text txtStateDisplay;
 
-    [Header("--- LOG ---")] 
+    [Header("--- LOG ---")]
     public TMP_Text txtConsoleLog;
     private Queue<string> _logQueue = new Queue<string>();
 
@@ -60,7 +60,7 @@ public class UIManager : MonoBehaviour
     private bool isPaused = false;
 
     // ==========================================
-    // 注册日志监听
+    // Register Log Listener
     // ==========================================
     void OnEnable()
     {
@@ -90,20 +90,20 @@ public class UIManager : MonoBehaviour
 
     void Start()
     {
-        // 1. 尺寸按钮
+        // 1. Size Buttons
         btnL.onClick.AddListener(() => OnBoxSelected("L"));
         btnM.onClick.AddListener(() => OnBoxSelected("M"));
         btnS.onClick.AddListener(() => OnBoxSelected("S"));
 
-        // 2. 方向按钮
+        // 2. Orientation Buttons
         if (btnDefault) btnDefault.onClick.AddListener(() => OnOrientationSelected(false));
         if (btnRotate) btnRotate.onClick.AddListener(() => OnOrientationSelected(true));
 
-        // 3. 层数按钮
+        // 3. Layer Buttons
         if (btnLayerMinus) btnLayerMinus.onClick.AddListener(() => ChangeLayerCount(-1));
         if (btnLayerPlus) btnLayerPlus.onClick.AddListener(() => ChangeLayerCount(1));
 
-        // 4. state button
+        // 4. State Buttons
         if (btnStart != null) btnStart.onClick.AddListener(OnStartClicked);
         if (btnPause != null) btnPause.onClick.AddListener(OnPauseClicked);
         if (btnRestart != null) btnRestart.onClick.AddListener(OnRestartClicked);
@@ -143,14 +143,14 @@ public class UIManager : MonoBehaviour
 
     void OnStartClicked()
     {
-        // 情况 1: 如果是暂停状态，点击 Start 代表 "RESUME" 
+        // Case 1: If paused, clicking Start means "RESUME" 
         if (hasStarted && isPaused)
         {
             PerformResume();
             return;
         }
 
-        // 情况 2: 如果还没开始，执行 "START" 
+        // Case 2: If not started, execute "START" 
         if (!hasStarted)
         {
             PerformStart();
@@ -188,22 +188,22 @@ public class UIManager : MonoBehaviour
     }
 
     // ==========================================
-    // Restart 按钮逻辑 
+    // Restart Button Logic 
     // ==========================================
     void OnRestartClicked()
     {
-        Debug.Log("🔄 正在重新加载场景...");
+        Debug.Log("🔄 Reloading Scene...");
 
-        // 获取当前场景的名字
+        // Get current scene name
         string currentSceneName = SceneManager.GetActiveScene().name;
 
-        // 重新加载它！
+        // Reload it!
         SceneManager.LoadScene(currentSceneName);
     }
 
     void ChangeLayerCount(int change)
     {
-        // 只有没开始时才允许改层数
+        // Only allow changing layers if not started
         if (hasStarted && !isPaused) return;
         if (hasStarted) return;
 
@@ -262,6 +262,6 @@ public class UIManager : MonoBehaviour
     public void NotifyJobFinished()
     {
         UpdateState(ProgramState.COMPLETED);
-        Debug.Log("🎉 任务完成！");
+        Debug.Log("🎉 Job Completed!");
     }
 }

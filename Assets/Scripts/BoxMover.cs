@@ -2,13 +2,13 @@ using UnityEngine;
 
 public class BoxMover : MonoBehaviour
 {
-    [Header("必须配置")]
-    [Tooltip("箱子要去的目标点 (世界坐标)")]
+    [Header("Required Configuration")]
+    [Tooltip("Target point for the box (World Coordinates)")]
     public Transform targetPoint;
-    [Tooltip("箱子的几何中心 (用于对齐)")]
+    [Tooltip("Geometric center of the box (For alignment)")]
     public Transform boxCenterReference;
 
-    [Header("设置")]
+    [Header("Settings")]
     public float moveSpeed = 0.5f;
 
     public bool IsArrived { get; private set; } = false;
@@ -18,12 +18,12 @@ public class BoxMover : MonoBehaviour
 
     void Start()
     {
-        // 刚开始先算一次
+        // Calculate once at start
         CalculatePath();
     }
 
     // ========================================================
-    // 【供 PointCalibrator 调用】
+    // [Called by PointCalibrator]
     // ========================================================
     public void RecalculateDestination()
     {
@@ -34,21 +34,21 @@ public class BoxMover : MonoBehaviour
     {
         if (targetPoint == null || boxCenterReference == null) return;
 
-        // 1. 强制关闭物理模拟，防止干扰移动
+        // 1. Force disable physics simulation to prevent interference with movement
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null) rb.isKinematic = true;
 
-        // 2. 计算世界坐标系下的偏移量
+        // 2. Calculate offset in world coordinates
         Vector3 worldOffset = boxCenterReference.position - transform.position;
 
-        // 3. 计算轴心 (Pivot) 最终应该在的世界坐标
+        // 3. Calculate the final world coordinate where the Pivot should be
         float targetX = targetPoint.position.x - worldOffset.x;
         float targetZ = targetPoint.position.z - worldOffset.z;
 
-        // 保持当前的 Y 轴高度 (世界坐标)
+        // Maintain current Y-axis height (World Coordinate)
         float fixedY = transform.position.y;
 
-        // 4. 组装最终的世界坐标终点
+        // 4. Assemble final world destination
         finalDestination = new Vector3(targetX, fixedY, targetZ);
 
         isMoving = true;
@@ -60,41 +60,41 @@ public class BoxMover : MonoBehaviour
     {
         if (!isMoving) return;
 
-        // 1. 步长计算
+        // 1. Calculate step
         float step = moveSpeed * Time.deltaTime;
 
-        // 2. 使用 MoveTowards 在世界坐标系中移动
+        // 2. Use MoveTowards to move in world coordinates
         transform.position = Vector3.MoveTowards(transform.position, finalDestination, step);
 
-        // 3. 判断到达 (使用世界坐标距离)
+        // 3. Check arrival (Using world coordinate distance)
         if (Vector3.Distance(transform.position, finalDestination) < 0.001f)
         {
-            // 强制吸附，消除浮点误差
+            // Snap to position to eliminate floating point error
             transform.position = finalDestination;
 
             isMoving = false;
             IsArrived = true;
 
             // ===========================================================
-            // 到位后恢复物理，让机械臂 Gripper 能感应到！
+            // Restore physics after arrival so the Robot Gripper can detect it!
             // ===========================================================
             Rigidbody rb = GetComponent<Rigidbody>();
             if (rb != null)
             {
-                rb.isKinematic = false; // 恢复物理感应
-                rb.WakeUp();            // 强制唤醒，确保碰撞检测立即生效
-                // 如果需要重力让它贴合地面，可以把下面这行取消注释
+                rb.isKinematic = false; // Restore physics sensing
+                rb.WakeUp();            // Force wake up to ensure collision detection takes effect immediately
+                // Uncomment line below if gravity is needed to settle on ground
                 // rb.useGravity = true; 
             }
             // ===========================================================
 
-            Debug.Log("✅ 箱子中心已对齐，物理已恢复，停止。");
+            Debug.Log("✅ Box center aligned, physics restored, stopping.");
             this.enabled = false;
         }
     }
 
     // ========================================================
-    // 添加可视化辅助线 (Gizmos)
+    // Add visualization gizmos
     // ========================================================
     void OnDrawGizmos()
     {
