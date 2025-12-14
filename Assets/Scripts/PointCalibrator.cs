@@ -16,7 +16,6 @@ public class PointCalibrator : MonoBehaviour
 
     void Start()
     {
-        // 游戏一开始，自动启动校准
         StartCoroutine(CalibrateRoutine());
     }
 
@@ -30,15 +29,13 @@ public class PointCalibrator : MonoBehaviour
         // 检查引用
         if (solver != null && solver.j6Hand != null && pickPoint != null)
         {
-            // 2. 【核心修改】获取 J6 (法兰/手腕) 的真实世界坐标
-            // 之前用的是 gripperTip，现在改用 j6Hand
+            // 2. 获取 J6 (法兰/手腕) 的真实世界坐标
             Vector3 j6RealPos = solver.j6Hand.position;
 
             Debug.Log($"[校准数据] PickPoint旧坐标: {pickPoint.position}");
             Debug.Log($"[校准数据] J6 真实坐标: {j6RealPos}");
 
-            // 3. 【核心修正】
-            // 将 PickPoint 的 X 和 Z 强行对齐到 J6
+            // 3. 将 PickPoint 的 X 和 Z 强行对齐到 J6
             // Y 轴保持 PickPoint 原来的高度 (传送带高度)
             Vector3 newPos = new Vector3(j6RealPos.x, pickPoint.position.y, j6RealPos.z);
 

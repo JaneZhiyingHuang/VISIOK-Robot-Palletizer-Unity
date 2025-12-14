@@ -27,7 +27,6 @@ public class BoxMover : MonoBehaviour
     // ========================================================
     public void RecalculateDestination()
     {
-        // Debug.Log($"[BoxMover] 收到校准信号，正在更新终点...");
         CalculatePath();
     }
 
@@ -39,7 +38,7 @@ public class BoxMover : MonoBehaviour
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null) rb.isKinematic = true;
 
-        // 2. 【核心修改】计算世界坐标系下的偏移量
+        // 2. 计算世界坐标系下的偏移量
         Vector3 worldOffset = boxCenterReference.position - transform.position;
 
         // 3. 计算轴心 (Pivot) 最终应该在的世界坐标
@@ -77,7 +76,7 @@ public class BoxMover : MonoBehaviour
             IsArrived = true;
 
             // ===========================================================
-            // 【新增逻辑】到位后恢复物理，让机械臂 Gripper 能感应到！
+            // 到位后恢复物理，让机械臂 Gripper 能感应到！
             // ===========================================================
             Rigidbody rb = GetComponent<Rigidbody>();
             if (rb != null)

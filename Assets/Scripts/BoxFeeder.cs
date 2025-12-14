@@ -9,7 +9,6 @@ public class BoxFeeder : MonoBehaviour
     public GameObject prefabM;
     public GameObject prefabS;
 
-    // 当前正在使用的预制体
     private GameObject _activePrefab;
 
     [Header("核心引用")]
@@ -34,7 +33,6 @@ public class BoxFeeder : MonoBehaviour
         if (spawnPoint == null || palletCalculator == null) return;
         if (pickupPointReference == null) pickupPointReference = spawnPoint;
 
-        // 默认选中 L
         SwitchBoxType("L");
     }
 

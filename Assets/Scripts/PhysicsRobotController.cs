@@ -25,7 +25,7 @@ public class PhysicsRobotController : MonoBehaviour
     public GripperController gripper;
 
     // ---------------------------------------------------------
-    // 【关键功能】右键脚本 -> 选择 "Record Zero Pose"
+    // 右键脚本 -> 选择 "Record Zero Pose"
     // 必须先做这一步，告诉脚本“什么样子才算 0 度”
     // ---------------------------------------------------------
     [ContextMenu("1. 记录当前姿态为零位 (Record Zero Pose)")]
@@ -37,7 +37,7 @@ public class PhysicsRobotController : MonoBehaviour
             {
                 // 把现在的旋转记录下来，作为“基准”
                 j.initialEuler = j.joint.transform.localEulerAngles;
-                j.targetAngle = 0f; // 重置控制滑块
+                j.targetAngle = 0f; 
                 j.startAngle = 0f;
             }
         }
@@ -133,7 +133,7 @@ public class PhysicsRobotController : MonoBehaviour
     }
 
     // ========================================================
-    // 【核心修复】智能最短路径应用 + 速度限制
+    // 智能最短路径应用 + 速度限制
     // ========================================================
     void ApplyPhysics(JointControl j, float targetAngle, bool forceSnap)
     {

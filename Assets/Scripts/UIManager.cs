@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
+using System.Collections.Generic; 
 
 public class UIManager : MonoBehaviour
 {
@@ -40,8 +41,12 @@ public class UIManager : MonoBehaviour
     [Header("--- STATE ---")]
     public Button btnStart;
     public Button btnPause;
-    public Button btnRestart; // 你的重启按钮
+    public Button btnRestart; 
     public TMP_Text txtStateDisplay;
+
+    [Header("--- LOG ---")] 
+    public TMP_Text txtConsoleLog;
+    private Queue<string> _logQueue = new Queue<string>();
 
     [Header("--- COLOR ---")]
     public Color normalColor = Color.white;
@@ -53,6 +58,35 @@ public class UIManager : MonoBehaviour
 
     private bool hasStarted = false;
     private bool isPaused = false;
+
+    // ==========================================
+    // 注册日志监听
+    // ==========================================
+    void OnEnable()
+    {
+        Application.logMessageReceived += HandleLog;
+    }
+
+    void OnDisable()
+    {
+        Application.logMessageReceived -= HandleLog;
+    }
+
+    void HandleLog(string logString, string stackTrace, LogType type)
+    {
+        if (txtConsoleLog == null) return;
+
+        string formattedLog = "> " + logString;
+
+        _logQueue.Enqueue(formattedLog);
+
+        if (_logQueue.Count > 3)
+        {
+            _logQueue.Dequeue();
+        }
+
+        txtConsoleLog.text = string.Join("\n", _logQueue);
+    }
 
     void Start()
     {
@@ -72,7 +106,6 @@ public class UIManager : MonoBehaviour
         // 4. state button
         if (btnStart != null) btnStart.onClick.AddListener(OnStartClicked);
         if (btnPause != null) btnPause.onClick.AddListener(OnPauseClicked);
-        // 【新增】绑定重启按钮
         if (btnRestart != null) btnRestart.onClick.AddListener(OnRestartClicked);
 
         OnBoxSelected("L");
@@ -110,14 +143,14 @@ public class UIManager : MonoBehaviour
 
     void OnStartClicked()
     {
-        // 情况 1: 如果是暂停状态，点击 Start 代表 "RESUME" (恢复)
+        // 情况 1: 如果是暂停状态，点击 Start 代表 "RESUME" 
         if (hasStarted && isPaused)
         {
             PerformResume();
             return;
         }
 
-        // 情况 2: 如果还没开始，执行 "START" (启动)
+        // 情况 2: 如果还没开始，执行 "START" 
         if (!hasStarted)
         {
             PerformStart();
@@ -155,7 +188,7 @@ public class UIManager : MonoBehaviour
     }
 
     // ==========================================
-    // 【修改后】Restart 按钮逻辑 (直接重开场景)
+    // Restart 按钮逻辑 
     // ==========================================
     void OnRestartClicked()
     {
@@ -165,7 +198,6 @@ public class UIManager : MonoBehaviour
         string currentSceneName = SceneManager.GetActiveScene().name;
 
         // 重新加载它！
-        // 这会让所有脚本的 Start() 重新运行，所有物体回到原位
         SceneManager.LoadScene(currentSceneName);
     }
 
@@ -230,7 +262,6 @@ public class UIManager : MonoBehaviour
     public void NotifyJobFinished()
     {
         UpdateState(ProgramState.COMPLETED);
-        // 完成后允许点 Restart，但不自动恢复 Start (需要点 Restart 清场才能 Start)
         Debug.Log("🎉 任务完成！");
     }
 }

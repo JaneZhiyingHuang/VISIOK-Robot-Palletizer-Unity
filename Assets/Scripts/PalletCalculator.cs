@@ -125,7 +125,7 @@ public class PalletCalculator : MonoBehaviour
             int countX = Mathf.FloorToInt((palletSize.x + 0.001f) / stepX);
             int countZ = Mathf.FloorToInt((palletSize.y + 0.001f) / stepZ);
 
-            // 只是为了 Inspector 预览第一层的数据 (可选)
+            // 只是为了 Inspector 预览第一层的数据 
             if (layer == 0)
             {
                 _capacityPerLayerX = countX;
@@ -141,7 +141,7 @@ public class PalletCalculator : MonoBehaviour
                     float localX = (x * stepX) + (currentBoxSize.x / 2f);
                     float localZ = (z * stepZ) + (currentBoxSize.z / 2f);
 
-                    // 【关键】Y轴高度 = (层数 * 箱高) + (半个箱高)
+                    // Y轴高度 = (层数 * 箱高) + (半个箱高)
                     float localY = (layer * rawDimensions.y) + (currentBoxSize.y / 2f);
 
                     Vector3 localPos = new Vector3(localX, localY, localZ);
@@ -170,32 +170,14 @@ public class PalletCalculator : MonoBehaviour
         return Vector3.zero;
     }
 
-    // ========================================================
-    // 获取当前箱子需要的旋转角度 (Y轴)
-    // 注意：因为现在有不同的层，角度是不一样的。
-    // 这个方法目前返回的是【第一层】的角度 (兼容旧代码)
-    // 如果你要完全支持多层旋转，AutoManager 需要改用 GetRotationForLayer
-    // ========================================================
     public float GetCurrentRotationY()
     {
-        // 保持你之前的逻辑：Align_Z_Rotated 返回 0，Align_X 返回 90
-        // 这对应的是第 0 层
         return placementOrientation == BoxOrientation.Align_Z_Rotated ? 0f : 90f;
     }
 
-    // ========================================================
-    // 获取指定层数的旋转角度
-    // AutoManager 在遍历时，可以通过计算 index 属于哪一层来调用这个
-    // ========================================================
     public float GetRotationForLayer(int layerIndex)
     {
         bool isRotated = IsLayerRotated(layerIndex);
-        // 如果 isRotated为真，说明这一层是用 "z,y,x" (Align_Z_Rotated状态)
-        // 根据你之前的代码逻辑：Align_Z_Rotated -> 0度, Align_X -> 90度
-
-        // 这里的逻辑有点绕，因为你的枚举名字和实际旋转是反的
-        // 简单来说：IsLayerRotated(layer) 返回 true 意味着 "跟 Align_Z_Rotated 一样" -> 0度
-        // IsLayerRotated(layer) 返回 false 意味着 "跟 Align_X 一样" -> 90度
 
         return isRotated ? 0f : 90f;
     }
@@ -248,9 +230,6 @@ public class PalletCalculator : MonoBehaviour
 
         List<Vector3> points = CalculateAllPoints();
 
-        // 这里的 Gizmos 稍微复杂一点，因为每一层的箱子尺寸不一样
-        // 我们需要反推这个点属于哪一层，来决定画框框的大小
-
         float boxHeight = rawDimensions.y;
         if (boxHeight < 0.001f) return;
 
@@ -266,19 +245,13 @@ public class PalletCalculator : MonoBehaviour
             Vector3 size = GetBoxSize(isRotated);
 
             // 绘制
-            // 注意：rotation 需要根据层数变化
             float rotAngle = GetRotationForLayer(layerIndex);
 
             // 构造一个在这个位置、并且旋转了对应角度的 Matrix
             Quaternion rotation = palletStartCorner.rotation * Quaternion.Euler(0, rotAngle, 0);
             Gizmos.matrix = Matrix4x4.TRS(pos, rotation, Vector3.one);
 
-            // 因为已经在 TRS 里旋转了，这里画默认尺寸的框即可，
-            // 或者：为了 Gizmos 简单，我们直接用计算好的 size 画框，不旋转 Matrix (如果 size 已经交换了长宽)
-            // 你的逻辑是 size 已经交换了长宽，所以 Matrix 只跟 StartCorner 保持一致即可，不用额外转 90
-            // 除非你的模型本身有旋转。
-
-            // 简单画法：用交换过的 size，只跟随托盘旋转
+            // 用交换过的 size，只跟随托盘旋转
             Gizmos.matrix = Matrix4x4.TRS(pos, palletStartCorner.rotation, Vector3.one);
             Gizmos.DrawWireCube(Vector3.zero, size);
         }
