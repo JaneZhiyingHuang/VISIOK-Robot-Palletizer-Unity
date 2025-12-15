@@ -21,7 +21,7 @@ public class PointCalibrator : MonoBehaviour
 
     IEnumerator CalibrateRoutine()
     {
-        Debug.Log($"<color=magenta>[Calibrator] Waiting {waitTime} seconds for robot arm physics to settle...</color>");
+        Debug.Log($"Waiting {waitTime} seconds for robot arm physics to settle...");
 
         // 1. Wait for physics engine to settle (Robot arm will droop slightly due to gravity)
         yield return new WaitForSeconds(waitTime);
@@ -32,8 +32,8 @@ public class PointCalibrator : MonoBehaviour
             // 2. Get real world position of J6 (Flange/Wrist)
             Vector3 j6RealPos = solver.j6Hand.position;
 
-            Debug.Log($"[Calibration Data] PickPoint Old Pos: {pickPoint.position}");
-            Debug.Log($"[Calibration Data] J6 Real Pos: {j6RealPos}");
+            //Debug.Log($"[Calibration Data] PickPoint Old Pos: {pickPoint.position}");
+            //Debug.Log($"[Calibration Data] J6 Real Pos: {j6RealPos}");
 
             // 3. Force align PickPoint X and Z to J6
             // Keep Y axis at PickPoint's original height (Conveyor height)
@@ -42,7 +42,7 @@ public class PointCalibrator : MonoBehaviour
             // Apply position
             pickPoint.position = newPos;
 
-            Debug.Log($"<color=green>[Calibration Complete] PickPoint aligned directly below J6! New Pos: {pickPoint.position}</color>");
+            //Debug.Log($"<color=green>[Calibration Complete] PickPoint aligned directly below J6! New Pos: {pickPoint.position}</color>");
 
             // =========================================================
             // 4. Notify box to recalculate path
@@ -56,7 +56,7 @@ public class PointCalibrator : MonoBehaviour
         }
         else
         {
-            Debug.LogError("❌ Calibration Failed: Solver, J6 or PickPoint reference missing!");
+            Debug.LogError(" Calibration Failed: Solver, J6 or PickPoint reference missing!");
         }
     }
 }

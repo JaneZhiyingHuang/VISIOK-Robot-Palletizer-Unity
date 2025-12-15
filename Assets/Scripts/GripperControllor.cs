@@ -20,7 +20,7 @@ public class GripperController : MonoBehaviour
             // 2. Set parent-child relationship, but keep "world transform" unchanged!
             attachedBox.SetParent(this.transform, true);
 
-            Debug.Log("Picked up: " + attachedBox.name);
+            //Debug.Log("Picked up: " + attachedBox.name);
         }
     }
 
@@ -35,7 +35,7 @@ public class GripperController : MonoBehaviour
             Rigidbody rb = attachedBox.GetComponent<Rigidbody>();
             if (rb != null) rb.isKinematic = false;
 
-            Debug.Log("Released: " + attachedBox.name);
+            //Debug.Log("Released: " + attachedBox.name);
             attachedBox = null;
         }
     }

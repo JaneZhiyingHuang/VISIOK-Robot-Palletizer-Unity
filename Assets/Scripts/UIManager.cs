@@ -76,7 +76,18 @@ public class UIManager : MonoBehaviour
     {
         if (txtConsoleLog == null) return;
 
-        string formattedLog = "> " + logString;
+        string cleanLog = logString;
+
+        if (cleanLog.StartsWith("["))
+        {
+            int closeIndex = cleanLog.IndexOf(']');
+            if (closeIndex >= 0)
+            {
+                cleanLog = cleanLog.Substring(closeIndex + 1).Trim();
+            }
+        }
+
+        string formattedLog = "> " + cleanLog;
 
         _logQueue.Enqueue(formattedLog);
 
@@ -262,6 +273,6 @@ public class UIManager : MonoBehaviour
     public void NotifyJobFinished()
     {
         UpdateState(ProgramState.COMPLETED);
-        Debug.Log("🎉 Job Completed!");
+        Debug.Log("Job Completed!");
     }
 }

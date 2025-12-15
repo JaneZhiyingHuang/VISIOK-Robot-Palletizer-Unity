@@ -88,7 +88,7 @@ public class BoxMover : MonoBehaviour
             }
             // ===========================================================
 
-            Debug.Log("✅ Box center aligned, physics restored, stopping.");
+            //Debug.Log("Box center aligned, physics restored, stopping.");
             this.enabled = false;
         }
     }

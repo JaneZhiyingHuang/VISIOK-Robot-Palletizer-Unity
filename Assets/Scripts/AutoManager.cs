@@ -40,8 +40,8 @@ public class AutoManager : MonoBehaviour
     public void SetPaused(bool paused)
     {
         _isPaused = paused;
-        if (_isPaused) Debug.Log("⏸️ Robot Arm Paused");
-        else Debug.Log("▶️ Robot Arm Resumed");
+        if (_isPaused) Debug.Log("Robot Arm Paused");
+        else Debug.Log("Robot Arm Resumed");
     }
 
     // ========================================================
@@ -49,11 +49,11 @@ public class AutoManager : MonoBehaviour
     // ========================================================
     IEnumerator StartDelayedJob()
     {
-        Debug.Log($"⏳ [System Warmup] Waiting {startDelay} seconds for the 1st box to be in position...");
+        Debug.Log($"[System Warmup] Waiting {startDelay} seconds for the 1st box to be in position...");
 
         yield return new WaitForSeconds(startDelay);
 
-        Debug.Log("🔥 [System Start] Starting picking job!");
+        Debug.Log("[System Start] Starting picking job!");
         StartCoroutine(RunFullPalletJob());
     }
 
@@ -97,7 +97,7 @@ public class AutoManager : MonoBehaviour
             }
             // ==============================
 
-            Debug.Log($"<color=orange>>> Processing Box {i + 1} / {totalCount} <<</color>");
+            Debug.Log($">> Processing Box {i + 1} / {totalCount} <<");
             currentTargetPos = allPoints[i];
 
             // 2. Dynamically calculate required rotation angle for current box
@@ -119,7 +119,7 @@ public class AutoManager : MonoBehaviour
             yield return new WaitForSeconds(0.5f);
         }
 
-        Debug.Log("<color=cyan>=== Job Finished ===</color>");
+        Debug.Log("=== Job Finished ===");
     }
 
     // ========================================================
@@ -135,12 +135,12 @@ public class AutoManager : MonoBehaviour
         Vector3 dropHover = targetPos + Vector3.up * hoverHeight;
 
         // Step 1: Pick
-        Debug.Log($"Step 1: Pick");
+        //Debug.Log($"Step 1: Pick");
         gripper.PickUp();
         yield return StartCoroutine(WaitForSecondsOrPause(0.5f));
 
         // Step 2: Lift
-        Debug.Log($"Step 2: Lift");
+        //Debug.Log($"Step 2: Lift");
         MoveRobotTo(pickHover, 0f, "Step 2");
         yield return StartCoroutine(WaitForSecondsOrPause(1f));
         //LogCurrentJointAngles("Status after Lift");
@@ -155,22 +155,22 @@ public class AutoManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("⚠️ BoxFeeder not assigned, cannot auto-restock!");
+            Debug.LogWarning("BoxFeeder not assigned, cannot auto-restock!");
         }
 
         // Step 3: Fly (Move to pallet)
-        Debug.Log($"Step 3: Move to pallet (Angle: {rotationY})");
+        //Debug.Log($"Step 3: Move to pallet ");
         MoveRobotTo(dropHover, rotationY, "Step 3");
         yield return StartCoroutine(WaitForSecondsOrPause(1f));
 
         // Step 4: Down
-        Debug.Log($"Step 4: Down");
+        //Debug.Log($"Step 4: Down");
         MoveRobotTo(targetPos, rotationY, "Step 4");
         yield return StartCoroutine(WaitForSecondsOrPause(0.5f));
         //LogCurrentJointAngles("Status at Place Point");
 
         // Step 5: Release
-        Debug.Log("Step 5: Release");
+        //Debug.Log("Step 5: Release");
         gripper.Release();
         yield return StartCoroutine(WaitForSecondsOrPause(0.5f));
 
@@ -179,7 +179,7 @@ public class AutoManager : MonoBehaviour
         yield return StartCoroutine(WaitForSecondsOrPause(1f));
 
         // Step 7: Return Home
-        Debug.Log("Step 7: Return Home");
+        //Debug.Log("Step 7: Return Home");
         MoveRobotHome();
         yield return StartCoroutine(WaitForSecondsOrPause(2.0f));
         //LogCurrentJointAngles("Status at Home");

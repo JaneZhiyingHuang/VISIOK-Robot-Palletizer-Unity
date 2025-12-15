@@ -41,7 +41,7 @@ public class PhysicsRobotController : MonoBehaviour
                 j.startAngle = 0f;
             }
         }
-        Debug.Log("✅ Zero pose recorded! Now sliding the slider rotates based on this pose.");
+        Debug.Log(" Zero pose recorded! Now sliding the slider rotates based on this pose.");
     }
 
     // ---------------------------------------------------------

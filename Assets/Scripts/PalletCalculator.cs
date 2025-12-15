@@ -190,7 +190,7 @@ public class PalletCalculator : MonoBehaviour
     {
         if (boxReference == null)
         {
-            Debug.LogError("❌ Please assign 'Box Reference' first!");
+            Debug.LogError("Please assign 'Box Reference' first!");
             return;
         }
 
@@ -198,7 +198,7 @@ public class PalletCalculator : MonoBehaviour
         if (ren != null)
         {
             rawDimensions = ren.bounds.size;
-            Debug.Log($"✅ [Renderer] Read raw dimensions: {rawDimensions}");
+            //Debug.Log($" [Renderer] Read raw dimensions: {rawDimensions}");
             return;
         }
 
@@ -206,7 +206,7 @@ public class PalletCalculator : MonoBehaviour
         if (col != null)
         {
             rawDimensions = col.bounds.size;
-            Debug.Log($"✅ [Collider] Read raw dimensions: {rawDimensions}");
+            //Debug.Log($" [Collider] Read raw dimensions: {rawDimensions}");
             return;
         }
     }
