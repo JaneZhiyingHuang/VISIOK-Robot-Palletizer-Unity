@@ -1,23 +1,39 @@
-# 🤖 VISIOK Robot Arm Project
+# 🤖 VISIOK Robot Palletizing VR development
 
-## 🚧 Project Status
-**In Development** – This project is currently under development as part of VISIOK’s company-oriented assignment for ICT students.
+## 🚧 Project Overview
 
-<img width="2048" height="2048" alt="Gemini_Generated_Image_6h8dt06h8dt06h8d" src="https://github.com/user-attachments/assets/1fe18287-e255-48cb-a714-afbbcadb9929" />
+This repository is part of the **VISIOK project**, which aims to support production, logistics, and automation education by allowing students to learn and practice industrial processes in a safe and immersive virtual environment using VR technology.
+
+In this project, I was responsible for designing and developing a **Robot Palletizing simulation**. The focus was on implementing the robot arm’s pick-and-place logic, palletizing algorithms, and user interaction.
+
+The project outcome is provided in two versions:
+
+- **PC-based 3D version:** A fixed-camera simulation designed for clear visualization and efficient testing of the robot arm’s palletizing workflow.
+
+- **VR version:** An immersive virtual reality experience that allows users to operate the control panel and observe the robot palletizing process using a VR headset.
 
 ---
+
+
+**3D Version:**
+
+<img width="1197" height="738" alt="Screenshot 2026-01-02 at 0 50 49" src="https://github.com/user-attachments/assets/2f8119e3-9a58-4620-af7b-9330ddda9914" />
+
+---
+
+**VR Version:**
+
+<img width="1500" height="936" alt="Screenshot 2026-01-02 at 0 49 38" src="https://github.com/user-attachments/assets/8d4abc2c-d076-4121-93fb-89744498fc07" />
+
+ ---
+**DEMO Vedio:**
+
 
 ## 🛠 Technologies Used
 - **Unity** – Real-time 3D simulation and animation  
 - **C#** – Scripting robotic arm movements and pick-and-place logic  
 - **Blender** – 3D modeling and skeleton setup of the robotic arm  
 - **Visual Components (VC)** – Importing and preparing mechanical parts  
-
----
-
-## 📋 Project Description
-The VISIOK project develops new virtual and visual learning solutions for higher education. The aim is to utilize VR technology in production, logistics, and automation education, allowing students to safely and clearly practice various industrial processes.
- 
 
 ---
 
@@ -33,6 +49,10 @@ The VISIOK project develops new virtual and visual learning solutions for higher
 
 ---
 
-## 🖼 Screenshots
-
+## 🖼 Developmemt Screenshots
 <img width="1464" height="929" alt="Screenshot 2025-11-27 at 17 17 55" src="https://github.com/user-attachments/assets/cd9b1c42-954c-40e9-ac8a-5c4cbedf4d1c" />
+<img width="1456" height="930" alt="Screenshot 2025-12-08 at 1 41 39" src="https://github.com/user-attachments/assets/dea32966-5977-4d76-ad07-ea35225874ef" />
+<img width="817" height="600" alt="Screenshot 2025-12-14 at 20 09 47" src="https://github.com/user-attachments/assets/a978c086-3a5b-4840-b607-5fc488039c32" />
+<img width="851" height="683" alt="Screenshot 2026-01-02 at 21 07 19" src="https://github.com/user-attachments/assets/bf31a26f-3550-4b17-850d-00fd44f43c42" />
+
+
