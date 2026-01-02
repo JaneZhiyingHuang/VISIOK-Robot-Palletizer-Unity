@@ -52,7 +52,7 @@ The project outcome is provided in two versions:
 ## 🖼 Developmemt Screenshots
 <img width="1464" height="929" alt="Screenshot 2025-11-27 at 17 17 55" src="https://github.com/user-attachments/assets/cd9b1c42-954c-40e9-ac8a-5c4cbedf4d1c" />
 <img width="1456" height="930" alt="Screenshot 2025-12-08 at 1 41 39" src="https://github.com/user-attachments/assets/dea32966-5977-4d76-ad07-ea35225874ef" />
-<img width="817" height="600" alt="Screenshot 2025-12-14 at 20 09 47" src="https://github.com/user-attachments/assets/a978c086-3a5b-4840-b607-5fc488039c32" />
-<img width="851" height="683" alt="Screenshot 2026-01-02 at 21 07 19" src="https://github.com/user-attachments/assets/bf31a26f-3550-4b17-850d-00fd44f43c42" />
+<img width="802" height="551" alt="Screenshot 2026-01-02 at 21 12 54" src="https://github.com/user-attachments/assets/47ce0d87-2093-4cce-a03b-aac6c3830b8a" />
+
 
 
