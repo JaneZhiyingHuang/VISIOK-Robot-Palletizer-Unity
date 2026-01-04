@@ -29,6 +29,10 @@ The project outcome is provided in two versions:
 **DEMO Vedio:**
 
 
+https://youtu.be/q-gXB0ndCDQ
+
+
+
 ## 🛠 Technologies Used
 - **Unity** – Real-time 3D simulation and animation  
 - **C#** – Scripting robotic arm movements and pick-and-place logic  
