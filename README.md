@@ -14,6 +14,13 @@ The project outcome is provided in two versions:
 
 ---
 
+**Demo Video:**
+
+⬇️ ⬇️ ⬇️ 
+
+https://youtu.be/q-gXB0ndCDQ
+
+ ---
 
 **3D Version:**
 
@@ -24,12 +31,6 @@ The project outcome is provided in two versions:
 **VR Version:**
 
 <img width="1500" height="936" alt="Screenshot 2026-01-02 at 0 49 38" src="https://github.com/user-attachments/assets/8d4abc2c-d076-4121-93fb-89744498fc07" />
-
- ---
-**DEMO Vedio:**
-
-
-https://youtu.be/q-gXB0ndCDQ
 
 
 
